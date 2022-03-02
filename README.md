@@ -2,7 +2,7 @@
 
 [![](http://meritbadge.herokuapp.com/omnitigs)](https://crates.io/crates/omnitigs)
 [![](https://docs.rs/omnitigs/badge.svg)](https://docs.rs/omnitigs)
-![](https://github.com/sebschmi/omnitigs-rs/workflows/Tests%20and%20Lints/badge.svg?branch=master)
+![](https://github.com/sebschmi/omnitigs-rs/workflows/Tests%20and%20Lints/badge.svg?branch=main)
 
 A Rust crate for omnitig-related algorithms.
 
