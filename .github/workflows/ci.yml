@@ -52,7 +52,7 @@ jobs:
       - name: Rust cache
         uses: Swatinem/rust-cache@v1
         with:
-          key: ${{ runner.os }}-${{ matrix.command.name }}-${{ matrix.toolchain }}
+          sharedKey: ${{ runner.os }}-${{ matrix.command.name }}-${{ matrix.toolchain }}
           working-directory: .
 
       - name: ${{matrix.command.name}}
