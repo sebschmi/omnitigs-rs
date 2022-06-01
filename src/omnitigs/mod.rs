@@ -150,6 +150,12 @@ where
 
 impl<Graph: GraphBase> Eq for Omnitig<Graph> where Graph::EdgeIndex: Eq {}
 
+impl<Graph: GraphBase> From<Omnitig<Graph>> for VecEdgeWalk<Graph> {
+    fn from(omnitig: Omnitig<Graph>) -> Self {
+        omnitig.omnitig
+    }
+}
+
 impl<Graph: GraphBase> std::fmt::Debug for Omnitig<Graph>
 where
     Graph::EdgeIndex: std::fmt::Debug,
