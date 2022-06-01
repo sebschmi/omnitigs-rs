@@ -19,6 +19,7 @@ use crate::omnitigs::univocal_extension_algorithms::{
 use crate::walks::EdgeOmnitigLikeExt;
 use bigraph::interface::static_bigraph::{StaticBigraph, StaticEdgeCentricBigraph};
 use bigraph::interface::BidirectedData;
+use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
 use std::iter::FromIterator;
 use traitgraph::index::GraphIndex;
@@ -382,6 +383,18 @@ impl<Graph: GraphBase> IntoIterator for Omnitigs<Graph> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.omnitigs.into_iter()
+    }
+}
+
+impl<Graph: GraphBase> Borrow<[Omnitig<Graph>]> for Omnitigs<Graph> {
+    fn borrow(&self) -> &[Omnitig<Graph>] {
+        &self.omnitigs
+    }
+}
+
+impl<Graph: GraphBase> BorrowMut<[Omnitig<Graph>]> for Omnitigs<Graph> {
+    fn borrow_mut(&mut self) -> &mut [Omnitig<Graph>] {
+        &mut self.omnitigs
     }
 }
 
