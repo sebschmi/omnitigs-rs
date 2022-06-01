@@ -122,6 +122,21 @@ where
     }
 }
 
+impl<Graph: GraphBase> Extend<Graph::EdgeIndex> for Omnitig<Graph> {
+    fn extend<T: IntoIterator<Item = Graph::EdgeIndex>>(&mut self, iter: T) {
+        self.omnitig.extend(iter)
+    }
+}
+
+impl<Graph: GraphBase> IntoIterator for Omnitig<Graph> {
+    type Item = <VecEdgeWalk<Graph> as IntoIterator>::Item;
+    type IntoIter = <VecEdgeWalk<Graph> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.omnitig.into_iter()
+    }
+}
+
 impl<Graph: GraphBase> PartialEq for Omnitig<Graph>
 where
     Graph::EdgeIndex: PartialEq,
