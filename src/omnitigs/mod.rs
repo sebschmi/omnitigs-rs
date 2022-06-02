@@ -22,6 +22,7 @@ use bigraph::interface::BidirectedData;
 use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
 use std::iter::FromIterator;
+use std::mem;
 use traitgraph::index::GraphIndex;
 use traitgraph::interface::{GraphBase, StaticGraph};
 use traitgraph::walks::{EdgeWalk, VecEdgeWalk, VecNodeWalk};
@@ -249,6 +250,7 @@ where
     /// Note: I am not sure if this method is correct in all cases, but it will panic if it finds a case where it is not correct.
     ///       For practical genomes it seems to work.
     pub fn remove_reverse_complements(&mut self, graph: &Graph) {
+        info!("Removing reverse complements");
         let initial_len = self.len();
         // Maps from edges to omnitigs that have this edge as first edge in their heart.
         let mut first_heart_edge_map = vec![usize::max_value(); graph.edge_count()];
@@ -321,6 +323,128 @@ where
             self.len()
         );
     }
+}
+
+/// Retains only one direction of each pair of reverse-complement walks and removes subwalks.
+/// This function does not assume that the walks are omnitigs, but works for any kind of walks.
+pub fn remove_subwalks_and_reverse_complements_from_walks<Graph: StaticEdgeCentricBigraph>(
+    walks: &mut Vec<VecEdgeWalk<Graph>>,
+    graph: &Graph,
+) where
+    Graph::EdgeData: BidirectedData + Eq,
+    Graph::NodeData: std::fmt::Debug,
+{
+    info!("Removing subwalks and reverse complements with a slow algorithm");
+    debug!("Finding subwalks to remove");
+    let mut remove = vec![false; walks.len()];
+    for (index_a, walk_a) in walks.iter().enumerate() {
+        if remove[index_a] {
+            continue;
+        }
+
+        for (index_b, walk_b) in walks.iter().enumerate().skip(index_a + 1) {
+            if remove[index_a] {
+                break;
+            }
+            if remove[index_b] {
+                continue;
+            }
+
+            match is_subwalk_or_reverse_complement(walk_a, walk_b, graph) {
+                SubwalkOrReverseComplement::No => {}
+                SubwalkOrReverseComplement::ReverseComplement
+                | SubwalkOrReverseComplement::Equal
+                | SubwalkOrReverseComplement::ASubwalkOfB
+                | SubwalkOrReverseComplement::AReverseComplementSubwalkOfB => {
+                    remove[index_a] = true;
+                }
+                SubwalkOrReverseComplement::BSubwalkOfA
+                | SubwalkOrReverseComplement::BReverseComplementSubwalkOfA => {
+                    remove[index_b] = true;
+                }
+            }
+        }
+    }
+
+    debug!("Removing subwalks");
+    let mut original_walks = Vec::new();
+    mem::swap(&mut original_walks, walks);
+    walks.extend(
+        original_walks
+            .into_iter()
+            .zip(remove.iter())
+            .filter_map(|(walk, &remove)| if remove { None } else { Some(walk) }),
+    );
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SubwalkOrReverseComplement {
+    No,
+    ReverseComplement,
+    Equal,
+    ASubwalkOfB,
+    BSubwalkOfA,
+    AReverseComplementSubwalkOfB,
+    BReverseComplementSubwalkOfA,
+}
+
+fn is_subwalk_or_reverse_complement<Graph: StaticEdgeCentricBigraph>(
+    walk_a: &VecEdgeWalk<Graph>,
+    walk_b: &VecEdgeWalk<Graph>,
+    graph: &Graph,
+) -> SubwalkOrReverseComplement
+where
+    Graph::EdgeData: BidirectedData + Eq,
+{
+    match walk_a.len().cmp(&walk_b.len()) {
+        Ordering::Less => {
+            let difference = walk_b.len() - walk_a.len();
+            for skip in 0..difference {
+                if walk_a
+                    .iter()
+                    .zip(walk_b.iter().skip(skip))
+                    .all(|(&edge_a, &edge_b)| edge_a == edge_b)
+                {
+                    return SubwalkOrReverseComplement::ASubwalkOfB;
+                }
+                if walk_a
+                    .iter()
+                    .rev()
+                    .zip(walk_b.iter().skip(skip))
+                    .all(|(&edge_a, &edge_b)| {
+                        graph.mirror_edge_edge_centric(edge_a) == Some(edge_b)
+                    })
+                {
+                    return SubwalkOrReverseComplement::AReverseComplementSubwalkOfB;
+                }
+            }
+        }
+        Ordering::Equal => {
+            if walk_a == walk_b {
+                return SubwalkOrReverseComplement::Equal;
+            }
+            if walk_a
+                .iter()
+                .rev()
+                .zip(walk_b.iter())
+                .all(|(&edge_a, &edge_b)| graph.mirror_edge_edge_centric(edge_a) == Some(edge_b))
+            {
+                return SubwalkOrReverseComplement::ReverseComplement;
+            }
+        }
+        Ordering::Greater => {
+            return match is_subwalk_or_reverse_complement(walk_b, walk_a, graph) {
+                SubwalkOrReverseComplement::No => SubwalkOrReverseComplement::No,
+                SubwalkOrReverseComplement::ASubwalkOfB => SubwalkOrReverseComplement::BSubwalkOfA,
+                SubwalkOrReverseComplement::AReverseComplementSubwalkOfB => {
+                    SubwalkOrReverseComplement::BReverseComplementSubwalkOfA
+                }
+                other => unreachable!("{:?}", other),
+            };
+        }
+    }
+
+    SubwalkOrReverseComplement::No
 }
 
 impl<Graph: GraphBase> Omnitigs<Graph> {
