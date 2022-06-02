@@ -249,6 +249,7 @@ where
     /// Note: I am not sure if this method is correct in all cases, but it will panic if it finds a case where it is not correct.
     ///       For practical genomes it seems to work.
     pub fn remove_reverse_complements(&mut self, graph: &Graph) {
+        let initial_len = self.len();
         // Maps from edges to omnitigs that have this edge as first edge in their heart.
         let mut first_heart_edge_map = vec![usize::max_value(); graph.edge_count()];
         for (i, omnitig) in self.iter().enumerate() {
@@ -311,6 +312,14 @@ where
                 self.omnitigs.push(omnitig);
             }
         }
+
+        let removed_count = initial_len - self.len();
+        debug!(
+            "Removed {} reverse complements, decreasing the number of omnitigs from {} to {}",
+            removed_count,
+            initial_len,
+            self.len()
+        );
     }
 }
 
