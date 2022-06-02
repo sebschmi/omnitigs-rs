@@ -335,6 +335,8 @@ pub fn remove_subwalks_and_reverse_complements_from_walks<Graph: StaticEdgeCentr
     Graph::NodeData: std::fmt::Debug,
 {
     info!("Removing subwalks and reverse complements with a slow algorithm");
+    let initial_len = walks.len();
+
     debug!("Finding subwalks to remove");
     let mut remove = vec![false; walks.len()];
     for (index_a, walk_a) in walks.iter().enumerate() {
@@ -374,6 +376,14 @@ pub fn remove_subwalks_and_reverse_complements_from_walks<Graph: StaticEdgeCentr
             .into_iter()
             .zip(remove.iter())
             .filter_map(|(walk, &remove)| if remove { None } else { Some(walk) }),
+    );
+
+    let removed_count = initial_len - walks.len();
+    debug!(
+        "Removed {} reverse complements, decreasing the number of omnitigs from {} to {}",
+        removed_count,
+        initial_len,
+        walks.len()
     );
 }
 
