@@ -55,6 +55,11 @@ jobs:
           sharedKey: ${{ runner.os }}-${{ matrix.command.name }}-${{ matrix.toolchain }}
           working-directory: .
 
+      - name: cargo update
+        uses: actions-rs/cargo@v1
+        with:
+          command: update
+
       - name: ${{matrix.command.name}}
         uses: actions-rs/cargo@v1
         with:
@@ -96,6 +101,11 @@ jobs:
         with:
           key: ${{ runner.os }}-${{ matrix.command.name }}-${{ matrix.toolchain }}-optional
           working-directory: .
+
+      - name: cargo update
+        uses: actions-rs/cargo@v1
+        with:
+          command: update
 
       - name: ${{matrix.command.name}}
         uses: actions-rs/cargo@v1
