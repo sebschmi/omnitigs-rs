@@ -225,13 +225,13 @@ where
 mod tests {
     use crate::macrotigs::macrotigs::Macrotigs;
     use crate::node_covering_node_visible_one_circular_safe::compute_maximal_node_covering_node_visible_one_circular_safe_walks;
-    use traitgraph::implementation::petgraph_impl;
+    use traitgraph::implementation::petgraph_impl::PetGraph;
     use traitgraph::interface::MutableGraphContainer;
     use traitgraph::interface::WalkableGraph;
 
     #[test]
     fn test_compute_node_centric_omnitigs_simple() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(());
         let n1 = graph.add_node(());
         let n2 = graph.add_node(());
@@ -316,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_minimal_trivial_walk_with_unsafe_heart() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(());
         let n1 = graph.add_node(());
         let n2 = graph.add_node(());
@@ -348,7 +348,7 @@ mod tests {
 
     #[test]
     fn test_trivial_node_heart() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(());
         let n1 = graph.add_node(());
 
@@ -375,7 +375,7 @@ mod tests {
 
     #[test]
     fn test_trivial_sea_cloud_node() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(());
         let n1 = graph.add_node(());
         let n2 = graph.add_node(());

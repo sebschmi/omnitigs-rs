@@ -730,13 +730,13 @@ pub trait NodeCentricUnivocalExtensionAlgorithm<
 #[cfg(test)]
 mod tests {
     use crate::omnitigs::{Omnitig, Omnitigs};
-    use traitgraph::implementation::petgraph_impl;
+    use traitgraph::implementation::petgraph_impl::PetGraph;
     use traitgraph::interface::MutableGraphContainer;
     use traitgraph::interface::WalkableGraph;
 
     #[test]
     fn test_compute_only_trivial_omnitigs_simple() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(());
         let n1 = graph.add_node(());
         let n2 = graph.add_node(());

@@ -151,14 +151,14 @@ impl<
 mod tests {
     use super::StaticHydrostructure;
     use crate::hydrostructure::Hydrostructure;
-    use traitgraph::implementation::petgraph_impl;
+    use traitgraph::implementation::petgraph_impl::PetGraph;
     use traitgraph::interface::subgraph::DecoratingSubgraph;
     use traitgraph::interface::MutableGraphContainer;
     use traitgraph::interface::WalkableGraph;
 
     #[test]
     fn test_hydrostructure_avertible_by_shortcut() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(0);
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
@@ -182,7 +182,7 @@ mod tests {
 
     #[test]
     fn test_hydrostructure_avertible_by_sea_cloud_edge() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(0);
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_hydrostructure_bridge_like_by_biunivocal() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(0);
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
@@ -278,7 +278,7 @@ mod tests {
 
     #[test]
     fn test_hydrostructure_bridge_like_non_trivial() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(0);
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);

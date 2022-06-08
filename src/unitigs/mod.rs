@@ -462,13 +462,13 @@ where
 mod test {
     use super::{NodeUnitig, NodeUnitigs};
     use crate::unitigs::{EdgeUnitig, EdgeUnitigs};
-    use traitgraph::implementation::petgraph_impl;
+    use traitgraph::implementation::petgraph_impl::PetGraph;
     use traitgraph::interface::{MutableGraphContainer, WalkableGraph};
     use traitsequence::interface::Sequence;
 
     #[test]
     fn test_node_unitig_computation() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(0);
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
@@ -551,7 +551,7 @@ mod test {
 
     #[test]
     fn test_edge_unitig_computation() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(0);
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);

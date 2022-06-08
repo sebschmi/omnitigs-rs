@@ -26,13 +26,13 @@ impl<Graph: StaticGraph> MacronodeAlgorithm<Graph> for StronglyConnectedMacronod
 mod tests {
     use super::StronglyConnectedMacronodes;
     use crate::macrotigs::macronodes::MacronodeAlgorithm;
-    use traitgraph::implementation::petgraph_impl;
+    use traitgraph::implementation::petgraph_impl::PetGraph;
     use traitgraph::interface::{MutableGraphContainer, WalkableGraph};
     use traitsequence::interface::Sequence;
 
     #[test]
     fn test_compute_macronodes_complex_graph() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(0);
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
@@ -98,7 +98,7 @@ mod tests {
 
     #[test]
     fn test_compute_macronodes_empty_graph() {
-        let graph = petgraph_impl::new::<i32, i32>();
+        let graph = PetGraph::<(), ()>::new();
 
         let macronodes = StronglyConnectedMacronodes::compute_macronodes(&graph);
         let mut macronodes_iter = macronodes.iter();

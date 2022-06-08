@@ -133,12 +133,12 @@ mod tests {
     use super::count_uncompacted_edge_unitigs;
     use super::count_uncompacted_node_unitigs;
     use super::UncompactedNodeUnitigs;
-    use traitgraph::implementation::petgraph_impl;
+    use traitgraph::implementation::petgraph_impl::PetGraph;
     use traitgraph::interface::MutableGraphContainer;
 
     #[test]
     fn test_count_uncompacted_node_unitigs_four() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(0);
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
@@ -208,7 +208,7 @@ mod tests {
 
     #[test]
     fn test_count_uncompacted_node_unitigs_three() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(0);
         let n2 = graph.add_node(2);
         let n3 = graph.add_node(3);
@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn test_count_uncompacted_node_unitigs_two() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(0);
         let n3 = graph.add_node(3);
         let n4 = graph.add_node(4);
@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn test_count_uncompacted_edge_unitigs_four() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(0);
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
@@ -384,7 +384,7 @@ mod tests {
 
     #[test]
     fn test_count_uncompacted_edge_unitigs_three() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(0);
         let n2 = graph.add_node(2);
         let n3 = graph.add_node(3);
@@ -424,7 +424,7 @@ mod tests {
 
     #[test]
     fn test_count_uncompacted_edge_unitigs_two() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(0);
         let n3 = graph.add_node(3);
         let n4 = graph.add_node(4);

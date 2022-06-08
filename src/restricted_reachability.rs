@@ -291,12 +291,13 @@ mod tests {
     use crate::restricted_reachability::compute_restricted_backward_reachability;
     use crate::restricted_reachability::compute_restricted_forward_reachability;
     use traitgraph::implementation::bit_vector_subgraph::BitVectorSubgraph;
+    use traitgraph::implementation::petgraph_impl::PetGraph;
     use traitgraph::interface::subgraph::DecoratingSubgraph;
     use traitgraph::interface::MutableGraphContainer;
 
     #[test]
     fn test_restricted_forward_reachability_simple() {
-        let mut graph = traitgraph::implementation::petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(0);
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);
@@ -319,7 +320,7 @@ mod tests {
 
     #[test]
     fn test_restricted_backward_reachability_simple() {
-        let mut graph = traitgraph::implementation::petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(0);
         let n1 = graph.add_node(1);
         let n2 = graph.add_node(2);

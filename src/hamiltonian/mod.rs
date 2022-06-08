@@ -528,7 +528,8 @@ mod tests {
     use crate::hamiltonian::preprocess_hamiltonian_circuit;
     use rand::rngs::StdRng;
     use rand::SeedableRng;
-    use traitgraph::implementation::petgraph_impl;
+    use rand_chacha::{ChaCha12Rng};
+    use traitgraph::implementation::petgraph_impl::PetGraph;
     use traitgraph::interface::{ImmutableGraphContainer, MutableGraphContainer};
     use traitgraph_algo::components::is_strongly_connected;
     use traitgraph_algo::predefined_graphs::{
@@ -537,7 +538,7 @@ mod tests {
 
     #[test]
     fn test_random_hamiltonian_graphs() {
-        let mut graph = petgraph_impl::new::<(), ()>();
+        let mut graph = PetGraph::<(), ()>::new();
         let mut random = StdRng::seed_from_u64(0);
 
         for _ in 0..10 {
@@ -564,8 +565,8 @@ mod tests {
 
     #[test]
     fn test_random_graphs() {
-        let mut graph = petgraph_impl::new::<(), ()>();
-        let mut random = StdRng::seed_from_u64(0);
+        let mut graph = PetGraph::<(), ()>::new();
+        let mut random = ChaCha12Rng::seed_from_u64(0);
 
         let mut result = Vec::new();
         for _ in 0..10 {
@@ -592,14 +593,14 @@ mod tests {
         // This assertion is dependent on the random generator used and might fail if its implementation changes.
         debug_assert_eq!(
             result,
-            vec![true, false, false, true, true, true, false, true, false, true]
+            vec![true, true, true, true, true, true, true, true, false, false]
         );
     }
 
     #[test]
     fn test_random_strongly_connected_graphs() {
-        let mut graph = petgraph_impl::new::<(), ()>();
-        let mut random = StdRng::seed_from_u64(0);
+        let mut graph = PetGraph::<(), ()>::new();
+        let mut random = ChaCha12Rng::seed_from_u64(0);
 
         let mut result = Vec::new();
         let mut result_node_fraction = Vec::new();
@@ -643,7 +644,7 @@ mod tests {
         // This assertion is dependent on the random generator used and might fail if its implementation changes.
         debug_assert_eq!(
             result,
-            vec![true, true, true, true, false, true, true, true, true, true]
+            vec![true, true, true, true, true, true, true, true, true, true]
         );
     }
 }

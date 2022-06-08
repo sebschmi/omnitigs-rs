@@ -266,7 +266,7 @@ fn extend_left_micro_omnitig<Graph: StaticGraph>(
 
 #[cfg(test)]
 mod tests {
-    use traitgraph::implementation::petgraph_impl;
+    use traitgraph::implementation::petgraph_impl::PetGraph;
     use traitgraph::interface::MutableGraphContainer;
     use crate::macrotigs::macronodes::strongly_connected_macronode_algorithm::StronglyConnectedMacronodes;
     use crate::macrotigs::microtigs::strongly_connected_hydrostructure_based_maximal_microtig_algorithm::StronglyConnectedHydrostructureBasedMaximalMicrotigs;
@@ -277,7 +277,7 @@ mod tests {
 
     #[test]
     fn test_compute_maximal_microtigs_one_secluded() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(());
         let n1 = graph.add_node(());
         let n2 = graph.add_node(());
@@ -331,7 +331,7 @@ mod tests {
 
     #[test]
     fn test_compute_maximal_microtigs_one_with_cross_bivalent() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(());
         let n1 = graph.add_node(());
         let n2 = graph.add_node(());
@@ -403,7 +403,7 @@ mod tests {
 
     #[test]
     fn test_compute_maximal_microtigs_two() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(());
         let n1 = graph.add_node(());
         let n2 = graph.add_node(());

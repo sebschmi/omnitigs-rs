@@ -63,7 +63,7 @@ impl<Graph: StaticGraph> MacrotigBasedNonTrivialOmnitigAlgorithm<Graph>
 
 #[cfg(test)]
 mod tests {
-    use traitgraph::implementation::petgraph_impl;
+    use traitgraph::implementation::petgraph_impl::PetGraph;
     use crate::macrotigs::macronodes::strongly_connected_macronode_algorithm::StronglyConnectedMacronodes;
     use crate::macrotigs::microtigs::strongly_connected_hydrostructure_based_maximal_microtig_algorithm::StronglyConnectedHydrostructureBasedMaximalMicrotigs;
     use crate::macrotigs::macronodes::MacronodeAlgorithm;
@@ -77,7 +77,7 @@ mod tests {
 
     #[test]
     fn test_compute_non_trivial_omnitigs_simple() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(());
         let n1 = graph.add_node(());
         let n2 = graph.add_node(());

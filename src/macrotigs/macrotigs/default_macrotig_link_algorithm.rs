@@ -118,7 +118,7 @@ impl<Graph: StaticGraph> MaximalMacrotigsAlgorithm<Graph> for DefaultMacrotigLin
 
 #[cfg(test)]
 mod tests {
-    use traitgraph::implementation::petgraph_impl;
+    use traitgraph::implementation::petgraph_impl::PetGraph;
     use traitgraph::interface::{MutableGraphContainer, WalkableGraph};
     use crate::macrotigs::macronodes::strongly_connected_macronode_algorithm::StronglyConnectedMacronodes;
     use crate::macrotigs::microtigs::strongly_connected_hydrostructure_based_maximal_microtig_algorithm::StronglyConnectedHydrostructureBasedMaximalMicrotigs;
@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn test_compute_maximal_macrotigs_one_secluded() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(());
         let n1 = graph.add_node(());
         let n2 = graph.add_node(());
@@ -185,7 +185,7 @@ mod tests {
 
     #[test]
     fn test_compute_maximal_macrotigs_one_with_cross_bivalent() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(());
         let n1 = graph.add_node(());
         let n2 = graph.add_node(());
@@ -257,7 +257,7 @@ mod tests {
 
     #[test]
     fn test_compute_maximal_macrotigs_two() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(());
         let n1 = graph.add_node(());
         let n2 = graph.add_node(());
@@ -298,7 +298,7 @@ mod tests {
 
     #[test]
     fn test_cycle_with_central_bypass() {
-        let mut graph = petgraph_impl::new();
+        let mut graph = PetGraph::new();
         let n0 = graph.add_node(());
         let n1 = graph.add_node(());
         let n2 = graph.add_node(());
