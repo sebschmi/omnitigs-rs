@@ -167,6 +167,7 @@ impl<Graph: StaticGraph> NodeUnitigs<Graph> {
     ///
     /// If the graph is a cycle, it outputs an arbitrary subwalk.
     pub fn compute(graph: &Graph) -> Self {
+        trace!("Computing node-centric unitigs");
         let mut used_edges = vec![false; graph.edge_count()];
         let mut unitigs = Vec::new();
 
@@ -207,6 +208,7 @@ impl<Graph: StaticGraph> NodeUnitigs<Graph> {
             }
         }
 
+        trace!("Computed {} node-centric unitigs", unitigs.len());
         Self { unitigs }
     }
 }
