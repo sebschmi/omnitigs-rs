@@ -11,6 +11,7 @@ pub struct DefaultMacrotigLinkAlgorithm;
 
 impl<Graph: StaticGraph> MaximalMacrotigsAlgorithm<Graph> for DefaultMacrotigLinkAlgorithm {
     fn compute_maximal_macrotigs(graph: &Graph, microtigs: &Microtigs<Graph>) -> Macrotigs<Graph> {
+        trace!("Computing maximal macrotigs");
         let mut result = Vec::new();
         let mut outgoing_microtigs = vec![Graph::OptionalEdgeIndex::new_none(); graph.edge_count()];
         let mut incoming_microtigs = vec![Graph::OptionalEdgeIndex::new_none(); graph.edge_count()];
@@ -112,6 +113,7 @@ impl<Graph: StaticGraph> MaximalMacrotigsAlgorithm<Graph> for DefaultMacrotigLin
             }
         }
 
+        trace!("Computed {} maximal macrotigs", result.len());
         Macrotigs::from(result)
     }
 }

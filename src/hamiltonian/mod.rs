@@ -528,7 +528,7 @@ mod tests {
     use crate::hamiltonian::preprocess_hamiltonian_circuit;
     use rand::rngs::StdRng;
     use rand::SeedableRng;
-    use rand_chacha::{ChaCha12Rng};
+    use rand_chacha::ChaCha12Rng;
     use traitgraph::implementation::petgraph_impl::PetGraph;
     use traitgraph::interface::{ImmutableGraphContainer, MutableGraphContainer};
     use traitgraph_algo::components::is_strongly_connected;

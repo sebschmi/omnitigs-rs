@@ -8,6 +8,7 @@ pub struct StronglyConnectedMacronodes;
 
 impl<Graph: StaticGraph> MacronodeAlgorithm<Graph> for StronglyConnectedMacronodes {
     fn compute_macronodes(graph: &Graph) -> Macronodes<Graph> {
+        trace!("Computing macronodes");
         let unitigs = NodeUnitigs::compute(graph);
         let macronodes: Vec<_> = unitigs
             .into_iter()
@@ -18,6 +19,7 @@ impl<Graph: StaticGraph> MacronodeAlgorithm<Graph> for StronglyConnectedMacronod
             })
             .map(NodeUnitig::into_node_walk)
             .collect();
+        trace!("Computed {} macronodes", macronodes.len());
         Macronodes::from(macronodes)
     }
 }

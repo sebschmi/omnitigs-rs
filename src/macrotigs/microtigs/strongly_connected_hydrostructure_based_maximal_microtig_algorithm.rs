@@ -21,6 +21,7 @@ impl<Graph: StaticGraph> MaximalMicrotigsAlgorithm<Graph>
         graph: &Graph,
         macronodes: &Macronodes<Graph>,
     ) -> Microtigs<Graph> {
+        trace!("Computing maximal microtigs");
         let mut result = Vec::new();
         let mut macronodes_without_microtig_amount = 0;
 
@@ -158,6 +159,7 @@ impl<Graph: StaticGraph> MaximalMicrotigsAlgorithm<Graph>
             }
         }
 
+        trace!("Computed {} maximal microtigs", result.len());
         Microtigs::from_vec_with_statistics(result, macronodes_without_microtig_amount)
     }
 }

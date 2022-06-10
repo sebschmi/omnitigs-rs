@@ -14,6 +14,7 @@ impl<Graph: StaticGraph> MacrotigBasedNonTrivialOmnitigAlgorithm<Graph>
         graph: &Graph,
         macrotigs: &Macrotigs<Graph>,
     ) -> Omnitigs<Graph> {
+        trace!("Computing maximal non-trivial omnitigs using the hydrostructure");
         let mut omnitigs = Vec::new();
         let mut omnitigs_per_macrotig = Vec::new();
 
@@ -57,6 +58,7 @@ impl<Graph: StaticGraph> MacrotigBasedNonTrivialOmnitigAlgorithm<Graph>
             omnitigs_per_macrotig.push(omnitigs_per_macrotig_current);
         }
 
+        trace!("Computed {} maximal non-trivial omnitigs", omnitigs.len());
         Omnitigs::new(omnitigs, omnitigs_per_macrotig)
     }
 }
