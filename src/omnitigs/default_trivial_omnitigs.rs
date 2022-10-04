@@ -150,7 +150,7 @@ mod tests {
     use traitgraph::interface::MutableGraphContainer;
     use crate::omnitigs::incremental_hydrostructure_macrotig_based_non_trivial_omnitigs::IncrementalHydrostructureMacrotigBasedNonTrivialOmnitigAlgorithm;
     use crate::omnitigs::{MacrotigBasedNonTrivialOmnitigAlgorithm, Omnitigs, TrivialOmnitigAlgorithm, Omnitig};
-    use crate::omnitigs::default_trivial_omnitigs::SccTrivialOmnitigAlgorithm;
+    use crate::omnitigs::default_trivial_omnitigs::{is_edge_in_maximal_trivial_omnitig_heart, SccTrivialOmnitigAlgorithm};
 
     #[test]
     fn test_compute_omnitigs_simple() {
@@ -406,5 +406,30 @@ mod tests {
             trivial_omnitigs,
             Omnitigs::from(vec![Omnitig::new(graph.create_edge_walk(&[e0, e1]), 0, 1)])
         );
+    }
+
+    #[test]
+    fn test_is_edge_in_maximal_trivial_omnitig_heart_tip() {
+        let mut graph = PetGraph::new();
+        let n0 = graph.add_node(0);
+        let n1 = graph.add_node(1);
+        let n2 = graph.add_node(2);
+        let n3 = graph.add_node(3);
+        let n4 = graph.add_node(4);
+        let n5 = graph.add_node(5);
+        let n6 = graph.add_node(6);
+        let e0 = graph.add_edge(n0, n1, 0);
+        let e1 = graph.add_edge(n1, n2, 1);
+        let e2 = graph.add_edge(n2, n3, 2);
+        let e3 = graph.add_edge(n3, n4, 3);
+        let e4 = graph.add_edge(n5, n6, 4);
+        let e5 = graph.add_edge(n6, n2, 5);
+
+        debug_assert!(is_edge_in_maximal_trivial_omnitig_heart(&graph, e0));
+        debug_assert!(is_edge_in_maximal_trivial_omnitig_heart(&graph, e1));
+        debug_assert!(!is_edge_in_maximal_trivial_omnitig_heart(&graph, e2));
+        debug_assert!(!is_edge_in_maximal_trivial_omnitig_heart(&graph, e3));
+        debug_assert!(is_edge_in_maximal_trivial_omnitig_heart(&graph, e4));
+        debug_assert!(is_edge_in_maximal_trivial_omnitig_heart(&graph, e5));
     }
 }

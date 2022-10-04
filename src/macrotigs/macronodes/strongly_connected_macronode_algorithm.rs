@@ -1,6 +1,6 @@
-use traitgraph::index::GraphIndex;
 use super::{MacronodeAlgorithm, Macronodes};
 use crate::unitigs::{NodeUnitig, NodeUnitigs};
+use traitgraph::index::GraphIndex;
 use traitgraph::interface::StaticGraph;
 use traitsequence::interface::Sequence;
 
@@ -25,7 +25,10 @@ impl<Graph: StaticGraph> MacronodeAlgorithm<Graph> for StronglyConnectedMacronod
     }
 }
 
-fn compute_macronodes_quicker<Graph: StaticGraph>(graph: &Graph, used_node_vector: &mut Vec<bool>) -> Macronodes<Graph> {
+fn compute_macronodes_quicker<Graph: StaticGraph>(
+    graph: &Graph,
+    used_node_vector: &mut Vec<bool>,
+) -> Macronodes<Graph> {
     used_node_vector.clear();
     used_node_vector.resize(graph.node_count(), false);
 
@@ -48,11 +51,17 @@ fn compute_macronodes_quicker<Graph: StaticGraph>(graph: &Graph, used_node_vecto
             macronode.push(predecessor_index);
             while graph.is_biunivocal_node(predecessor_index) {
                 used_node_vector[predecessor_index.as_usize()] = true;
-                predecessor_index = graph.in_neighbors(predecessor_index).next().unwrap().node_id;
+                predecessor_index = graph
+                    .in_neighbors(predecessor_index)
+                    .next()
+                    .unwrap()
+                    .node_id;
                 macronode.push(predecessor_index);
             }
             if graph.is_split_node(predecessor_index) {
-                if !used_node_vector[predecessor_index.as_usize()] && graph.is_bivalent_node(predecessor_index) {
+                if !used_node_vector[predecessor_index.as_usize()]
+                    && graph.is_bivalent_node(predecessor_index)
+                {
                     macronode.clear();
                     macronode.push(predecessor_index);
                     macronodes.push(macronode);
@@ -75,7 +84,9 @@ fn compute_macronodes_quicker<Graph: StaticGraph>(graph: &Graph, used_node_vecto
                 macronode.push(successor_index);
             }
             if graph.is_join_node(successor_index) {
-                if !used_node_vector[successor_index.as_usize()] && graph.is_bivalent_node(successor_index) {
+                if !used_node_vector[successor_index.as_usize()]
+                    && graph.is_bivalent_node(successor_index)
+                {
                     macronode.clear();
                     macronode.push(successor_index);
                     macronodes.push(macronode);
@@ -96,15 +107,19 @@ fn compute_macronodes_quicker<Graph: StaticGraph>(graph: &Graph, used_node_vecto
 #[cfg(test)]
 mod tests {
     use super::StronglyConnectedMacronodes;
+    use crate::macrotigs::macronodes::strongly_connected_macronode_algorithm::compute_macronodes_quicker;
     use crate::macrotigs::macronodes::MacronodeAlgorithm;
     use traitgraph::implementation::petgraph_impl::PetGraph;
     use traitgraph::index::GraphIndex;
-    use traitgraph::interface::{Edge, ImmutableGraphContainer, MutableGraphContainer, WalkableGraph};
+    use traitgraph::interface::{
+        Edge, ImmutableGraphContainer, MutableGraphContainer, WalkableGraph,
+    };
     use traitsequence::interface::Sequence;
-    use crate::macrotigs::macronodes::strongly_connected_macronode_algorithm::compute_macronodes_quicker;
 
     fn random(a: usize) -> usize {
-        a.wrapping_mul(31).wrapping_add(a.wrapping_mul(91)).wrapping_add(a.count_zeros() as usize)
+        a.wrapping_mul(31)
+            .wrapping_add(a.wrapping_mul(91))
+            .wrapping_add(a.count_zeros() as usize)
     }
 
     #[test]
@@ -223,7 +238,7 @@ mod tests {
             let selection = [8.into(), 28.into(), 67.into()];
             let mut tuples = Vec::new();
             for edge in graph.edge_indices() {
-                let Edge {from_node, to_node} = graph.edge_endpoints(edge);
+                let Edge { from_node, to_node } = graph.edge_endpoints(edge);
                 if selection.contains(&from_node) || selection.contains(&to_node) {
                     tuples.push((from_node.as_usize(), to_node.as_usize()));
                 }

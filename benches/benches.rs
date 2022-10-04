@@ -1,11 +1,13 @@
-use criterion::{black_box, Criterion, criterion_group, criterion_main};
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use omnitigs::macrotigs::macronodes::strongly_connected_macronode_algorithm::StronglyConnectedMacronodes;
+use omnitigs::macrotigs::macronodes::MacronodeAlgorithm;
 use traitgraph::implementation::petgraph_impl::PetGraph;
 use traitgraph::interface::MutableGraphContainer;
-use omnitigs::macrotigs::macronodes::MacronodeAlgorithm;
-use omnitigs::macrotigs::macronodes::strongly_connected_macronode_algorithm::StronglyConnectedMacronodes;
 
 fn random(a: usize) -> usize {
-    a.wrapping_mul(31).wrapping_add(a.wrapping_mul(91)).wrapping_add(a.count_zeros() as usize)
+    a.wrapping_mul(31)
+        .wrapping_add(a.wrapping_mul(91))
+        .wrapping_add(a.count_zeros() as usize)
 }
 
 fn bench_compute_macronodes(criterion: &mut Criterion) {
@@ -34,8 +36,5 @@ fn bench_compute_macronodes(criterion: &mut Criterion) {
     });
 }
 
-criterion_group!(
-    benches,
-    bench_compute_macronodes,
-);
+criterion_group!(benches, bench_compute_macronodes,);
 criterion_main!(benches);
