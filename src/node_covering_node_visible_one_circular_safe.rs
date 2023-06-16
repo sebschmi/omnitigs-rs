@@ -10,9 +10,9 @@ use traitgraph::walks::{NodeWalk, VecNodeWalk};
 use traitgraph_algo::components::is_strong_bridge;
 use traitsequence::interface::Sequence;
 
-fn check_safety<'graph, 'walk, Graph: StaticGraph>(
+fn check_safety<'graph, Graph: StaticGraph>(
     graph: &'graph Graph,
-    incremental_hydrostructure: &NodeBridgeLikeIncrementalHydrostructure<'graph, 'walk, Graph>,
+    incremental_hydrostructure: &NodeBridgeLikeIncrementalHydrostructure<'graph, '_, Graph>,
 ) -> bool
 where
     Graph::NodeIndex: 'static,

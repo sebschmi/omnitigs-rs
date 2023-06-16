@@ -10,7 +10,7 @@ use traitgraph_algo::traversal::{
 pub fn compute_restricted_edge_reachability<
     'a,
     Graph: StaticGraph,
-    NeighborStrategy: TraversalNeighborStrategy<'a, SubgraphType::ParentGraph>,
+    NeighborStrategy: TraversalNeighborStrategy<SubgraphType::ParentGraph>,
     SubgraphType: DecoratingSubgraph<ParentGraph = Graph, ParentGraphRef = &'a Graph>,
 >(
     graph: SubgraphType::ParentGraphRef,
@@ -110,7 +110,7 @@ pub fn compute_incremental_restricted_backward_edge_reachability<'a, Graph: Stat
 pub fn compute_restricted_node_reachability<
     'a,
     Graph: StaticGraph,
-    NeighborStrategy: TraversalNeighborStrategy<'a, SubgraphType::ParentGraph>,
+    NeighborStrategy: TraversalNeighborStrategy<SubgraphType::ParentGraph>,
     SubgraphType: DecoratingSubgraph<ParentGraph = Graph, ParentGraphRef = &'a Graph>,
 >(
     graph: SubgraphType::ParentGraphRef,

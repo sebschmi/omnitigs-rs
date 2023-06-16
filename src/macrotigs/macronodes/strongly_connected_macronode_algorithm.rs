@@ -7,6 +7,9 @@ use traitsequence::interface::Sequence;
 /// Compute the macronodes of a strongly connected graph.
 pub struct StronglyConnectedMacronodes;
 
+/// Compute the macronodes of a strongly connected graph possibly faster.
+pub struct FasterStronglyConnectedMacronodes;
+
 impl<Graph: StaticGraph> MacronodeAlgorithm<Graph> for StronglyConnectedMacronodes {
     fn compute_macronodes(graph: &Graph) -> Macronodes<Graph> {
         trace!("Computing macronodes");
@@ -15,7 +18,9 @@ impl<Graph: StaticGraph> MacronodeAlgorithm<Graph> for StronglyConnectedMacronod
             .into_iter()
             .filter(|unitig| {
                 (graph.out_degree(*unitig.iter().next().unwrap()) == 1
-                    && graph.in_degree(*unitig.iter().last().unwrap()) == 1)
+                    && graph.in_degree(*unitig.iter().last().unwrap()) == 1
+                    && graph.is_join_node(*unitig.iter().next().unwrap())
+                    && graph.is_split_node(*unitig.iter().last().unwrap()))
                     || (unitig.len() == 1 && graph.is_bivalent_node(*unitig.iter().next().unwrap()))
             })
             .map(NodeUnitig::into_node_walk)
@@ -25,6 +30,7 @@ impl<Graph: StaticGraph> MacronodeAlgorithm<Graph> for StronglyConnectedMacronod
     }
 }
 
+#[allow(dead_code)]
 fn compute_macronodes_quicker<Graph: StaticGraph>(
     graph: &Graph,
     used_node_vector: &mut Vec<bool>,
@@ -33,7 +39,7 @@ fn compute_macronodes_quicker<Graph: StaticGraph>(
     used_node_vector.resize(graph.node_count(), false);
 
     let mut macronodes = Vec::new();
-    for node_index in graph.node_indices() {
+    'node_loop: for node_index in graph.node_indices() {
         if used_node_vector[node_index.as_usize()] {
             continue;
         }
@@ -50,6 +56,11 @@ fn compute_macronodes_quicker<Graph: StaticGraph>(
             let mut predecessor_index = graph.in_neighbors(node_index).next().unwrap().node_id;
             macronode.push(predecessor_index);
             while graph.is_biunivocal_node(predecessor_index) {
+                if used_node_vector[predecessor_index.as_usize()] {
+                    // If we reach something used without finding a split, then this is not a macronode.
+                    continue 'node_loop;
+                }
+
                 used_node_vector[predecessor_index.as_usize()] = true;
                 predecessor_index = graph
                     .in_neighbors(predecessor_index)
@@ -79,6 +90,11 @@ fn compute_macronodes_quicker<Graph: StaticGraph>(
             let mut successor_index = graph.out_neighbors(node_index).next().unwrap().node_id;
             macronode.push(successor_index);
             while graph.is_biunivocal_node(successor_index) {
+                if used_node_vector[successor_index.as_usize()] {
+                    // If we reach something used without finding a join, then this is not a macronode.
+                    continue 'node_loop;
+                }
+
                 used_node_vector[successor_index.as_usize()] = true;
                 successor_index = graph.out_neighbors(successor_index).next().unwrap().node_id;
                 macronode.push(successor_index);
@@ -173,8 +189,8 @@ mod tests {
         graph.add_edge(n17, n8, 36);
         graph.add_edge(n17, n8, 37);
 
-        let macronodes = StronglyConnectedMacronodes::compute_macronodes(&graph);
-        let mut macronodes_iter = macronodes.iter();
+        let macronodes_slow = StronglyConnectedMacronodes::compute_macronodes(&graph);
+        let mut macronodes_iter = macronodes_slow.iter();
         debug_assert_eq!(
             macronodes_iter.next(),
             Some(&graph.create_node_walk(&[n0, n1, n2, n3]))
@@ -186,15 +202,21 @@ mod tests {
             Some(&graph.create_node_walk(&[n11]))
         );
         debug_assert_eq!(macronodes_iter.next(), None);
+        let mut macronodes_quicker = compute_macronodes_quicker(&graph, &mut Vec::new());
+        macronodes_quicker.macronodes.sort();
+        assert_eq!(macronodes_slow, macronodes_quicker);
     }
 
     #[test]
     fn test_compute_macronodes_empty_graph() {
         let graph = PetGraph::<(), ()>::new();
 
-        let macronodes = StronglyConnectedMacronodes::compute_macronodes(&graph);
-        let mut macronodes_iter = macronodes.iter();
+        let macronodes_slow = StronglyConnectedMacronodes::compute_macronodes(&graph);
+        let mut macronodes_iter = macronodes_slow.iter();
         debug_assert_eq!(macronodes_iter.next(), None);
+        let mut macronodes_quicker = compute_macronodes_quicker(&graph, &mut Vec::new());
+        macronodes_quicker.macronodes.sort();
+        assert_eq!(macronodes_slow, macronodes_quicker);
     }
 
     #[test]
@@ -206,8 +228,11 @@ mod tests {
         graph.add_edge(n0, n1, 10);
         graph.add_edge(n1, n2, 11);
         graph.add_edge(n2, n0, 12);
-        let macronodes = StronglyConnectedMacronodes::compute_macronodes(&graph);
-        assert_eq!(macronodes, vec![vec![n1, n2, n0, n1]].into());
+        let macronodes_slow = StronglyConnectedMacronodes::compute_macronodes(&graph);
+        assert_eq!(macronodes_slow, vec![].into());
+        let mut macronodes_quicker = compute_macronodes_quicker(&graph, &mut Vec::new());
+        macronodes_quicker.macronodes.sort();
+        assert_eq!(macronodes_slow, macronodes_quicker);
     }
 
     #[test]
