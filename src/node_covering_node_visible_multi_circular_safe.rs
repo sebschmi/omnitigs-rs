@@ -4,17 +4,19 @@ use crate::omnitigs::default_trivial_omnitigs::is_edge_in_maximal_trivial_omniti
 use crate::walks::{EdgeOmnitigLikeExt, NodeOmnitigLikeExt};
 use bitvector::BitVector;
 use traitgraph::index::GraphIndex;
-use traitgraph::interface::subgraph::SubgraphBase;
-use traitgraph::interface::StaticGraph;
+use traitgraph::interface::{ImmutableGraphContainer, StaticGraph, SubgraphBase};
 use traitgraph::walks::{EdgeWalk, VecEdgeWalk};
 use traitgraph::walks::{NodeWalk, VecNodeWalk};
 use traitgraph_algo::components::is_strong_bridge;
 use traitsequence::interface::Sequence;
 
-fn check_safety<'graph, Graph: StaticGraph + SubgraphBase<RootGraph = Graph>>(
+fn check_safety<'graph, Graph: StaticGraph + SubgraphBase>(
     graph: &'graph Graph,
     incremental_hydrostructure: &NodeBridgeLikeIncrementalHydrostructure<'graph, '_, Graph>,
-) -> bool {
+) -> bool
+where
+    Graph::NodeIndex: 'static, <Graph as SubgraphBase>::RootGraph: ImmutableGraphContainer
+{
     let current_node_walk: VecNodeWalk<Graph> = incremental_hydrostructure
         .current_walk()
         .clone_as_node_walk(graph)
@@ -29,9 +31,7 @@ fn check_safety<'graph, Graph: StaticGraph + SubgraphBase<RootGraph = Graph>>(
 
 /// Computes the maximal walks that are safe under the node-covering node-visible 1-circular walk model.
 /// Does not return single nodes.
-pub fn compute_maximal_node_covering_node_visible_one_circular_safe_walks<
-    Graph: StaticGraph + SubgraphBase<RootGraph = Graph>,
->(
+pub fn compute_maximal_node_covering_node_visible_one_circular_safe_walks<Graph: StaticGraph>(
     graph: &Graph,
     macrotigs: &Macrotigs<Graph>,
 ) -> Vec<VecNodeWalk<Graph>>
@@ -101,9 +101,7 @@ where
 }
 
 /// Computes the maximal subwalks that are safe under the node-covering node-visible 1-circular walk model.
-fn compute_maximal_node_covering_node_visible_one_circular_safe_subwalks<
-    Graph: StaticGraph + SubgraphBase<RootGraph = Graph>,
->(
+fn compute_maximal_node_covering_node_visible_one_circular_safe_subwalks<Graph: StaticGraph>(
     graph: &Graph,
     walk: &[Graph::EdgeIndex],
 ) -> Vec<VecNodeWalk<Graph>>
@@ -319,17 +317,17 @@ mod tests {
     #[test]
     fn test_minimal_trivial_walk_with_unsafe_heart() {
         let mut graph = PetGraph::new();
-        let n0 = graph.add_node(0);
-        let n1 = graph.add_node(1);
-        let n2 = graph.add_node(2);
-        let n3 = graph.add_node(3);
+        let n0 = graph.add_node(());
+        let n1 = graph.add_node(());
+        let n2 = graph.add_node(());
+        let n3 = graph.add_node(());
 
-        let _e0 = graph.add_edge(n0, n1, 100);
-        let e1 = graph.add_edge(n1, n2, 101);
-        let e2 = graph.add_edge(n2, n3, 102);
-        let e3 = graph.add_edge(n3, n1, 103);
-        let e4 = graph.add_edge(n3, n0, 104);
-        let e5 = graph.add_edge(n0, n2, 105);
+        let _e0 = graph.add_edge(n0, n1, ());
+        let e1 = graph.add_edge(n1, n2, ());
+        let e2 = graph.add_edge(n2, n3, ());
+        let e3 = graph.add_edge(n3, n1, ());
+        let e4 = graph.add_edge(n3, n0, ());
+        let e5 = graph.add_edge(n0, n2, ());
 
         let maximal_macrotigs = Macrotigs::compute(&graph);
         debug_assert_eq!(

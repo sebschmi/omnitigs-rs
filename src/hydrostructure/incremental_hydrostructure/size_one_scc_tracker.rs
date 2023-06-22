@@ -1,71 +1,30 @@
-use crate::hydrostructure::incremental_hydrostructure::IncrementalSafetyTracker;
+/*use crate::hydrostructure::incremental_hydrostructure::IncrementalSafetyTracker;
 use traitgraph::implementation::subgraphs::incremental_subgraph::IncrementalSubgraph;
-use traitgraph::interface::subgraph::SubgraphBase;
-use traitgraph::interface::ImmutableGraphContainer;
+use traitgraph::interface::{ImmutableGraphContainer, StaticGraph};
+use traitgraph_algo::components::decompose_strongly_connected_components_non_consecutive;
 
-/// A type that keeps counts of the nodes in the different hydrostructure components to dynamically determine if they contain nodes.
-/// It reports if a bridge-like walk is safe in the 1-circular node-centric model.
-pub struct NodeCentricComponentTracker {
-    sea_node_count: usize,
-    vapor_node_count: usize,
-    cloud_node_count: usize,
-    river_node_count: usize,
+/// A type that keeps track of the SCCs in the sea, river and cloud and checks if there is any SCC of size one present.
+pub struct SizeOneSccTracker<NodeIndex> {
+    current_size_one_sccs: Vec<NodeIndex>,
 }
 
-impl<'a, Graph: ImmutableGraphContainer + SubgraphBase> IncrementalSafetyTracker<'a, Graph>
-    for NodeCentricComponentTracker
-where
-    <Graph as SubgraphBase>::RootGraph: ImmutableGraphContainer,
+impl<'a, Graph: StaticGraph> IncrementalSafetyTracker<'a, Graph>
+    for SizeOneSccTracker<Graph::NodeIndex>
 {
     fn new_with_empty_subgraph(_graph: &'a Graph) -> Self {
         Self {
-            sea_node_count: 0,
-            vapor_node_count: 0,
-            cloud_node_count: 0,
-            river_node_count: 0,
+            current_size_one_sccs: Vec::new(),
         }
     }
 
     fn clear(&mut self) {
-        self.sea_node_count = 0;
-        self.vapor_node_count = 0;
-        self.cloud_node_count = 0;
-        self.river_node_count = 0;
+        self.current_size_one_sccs.clear();
     }
 
     fn reset(&mut self, r_plus: &IncrementalSubgraph<Graph>, r_minus: &IncrementalSubgraph<Graph>) {
         IncrementalSafetyTracker::<'a, Graph>::clear(self);
-        for node in r_plus.root().node_indices() {
-            match (
-                r_plus.contains_node_index(node),
-                r_minus.contains_node_index(node),
-            ) {
-                (true, true) => {
-                    self.vapor_node_count = self
-                        .vapor_node_count
-                        .checked_add(1)
-                        .expect("Overflow in node count")
-                }
-                (true, false) => {
-                    self.sea_node_count = self
-                        .sea_node_count
-                        .checked_add(1)
-                        .expect("Overflow in node count")
-                }
-                (false, true) => {
-                    self.cloud_node_count = self
-                        .cloud_node_count
-                        .checked_add(1)
-                        .expect("Overflow in node count")
-                }
-                (false, false) => {
-                    self.river_node_count = self
-                        .river_node_count
-                        .checked_add(1)
-                        .expect("Overflow in node count")
-                }
-            }
-        }
+        let r_plus_sccs = decompose_strongly_connected_components_non_consecutive(r_plus);
+        let r_minus_sccs = decompose_strongly_connected_components_non_consecutive(r_minus);
     }
 
     fn add_incremental_subgraph_step(
@@ -74,7 +33,7 @@ where
         r_minus: &IncrementalSubgraph<Graph>,
     ) {
         for node in r_plus.new_nodes() {
-            if r_minus.contains_node_index(*node) {
+            if r_minus.contains_node(*node) {
                 self.cloud_node_count = self
                     .cloud_node_count
                     .checked_sub(1)
@@ -102,7 +61,7 @@ where
         r_minus: &IncrementalSubgraph<Graph>,
     ) {
         for node in r_minus.new_nodes() {
-            if r_plus.contains_node_index(*node) {
+            if r_plus.contains_node(*node) {
                 self.vapor_node_count = self
                     .vapor_node_count
                     .checked_sub(1)
@@ -145,4 +104,4 @@ where
     fn does_safety_equal_bridge_like() -> bool {
         false
     }
-}
+}*/

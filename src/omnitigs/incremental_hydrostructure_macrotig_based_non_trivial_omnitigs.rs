@@ -1,13 +1,15 @@
 use crate::hydrostructure::incremental_hydrostructure::BridgeLikeIncrementalHydrostructure;
 use crate::macrotigs::macrotigs::Macrotigs;
 use crate::omnitigs::{MacrotigBasedNonTrivialOmnitigAlgorithm, Omnitig, Omnitigs};
+use traitgraph::interface::subgraph::SubgraphBase;
 use traitgraph::interface::StaticGraph;
 use traitsequence::interface::Sequence;
 
 /// A macrotig-based non-trivial omnitig algorithm that uses the incremental hydrostructure.
 pub struct IncrementalHydrostructureMacrotigBasedNonTrivialOmnitigAlgorithm;
 
-impl<Graph: StaticGraph> MacrotigBasedNonTrivialOmnitigAlgorithm<Graph>
+impl<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>>
+    MacrotigBasedNonTrivialOmnitigAlgorithm<Graph>
     for IncrementalHydrostructureMacrotigBasedNonTrivialOmnitigAlgorithm
 {
     fn compute_maximal_non_trivial_omnitigs(

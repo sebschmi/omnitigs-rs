@@ -16,9 +16,9 @@ rust-version = "1.58.1"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-traitgraph = "3.0.0"
-traitgraph-algo = "6.0.0"
-bigraph = "3.0.0"
+traitgraph = "4.0.0-alpha.6"
+traitgraph-algo = "7.0.0-alpha.5"
+bigraph = "4.0.0-alpha.5"
 traitsequence = "1.1.0"
 bitvector = "0.1.5"
 rand = "0.8.4"

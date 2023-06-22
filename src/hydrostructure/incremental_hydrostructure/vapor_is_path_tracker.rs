@@ -1,8 +1,8 @@
 use crate::hydrostructure::incremental_hydrostructure::IncrementalSafetyTracker;
-use traitgraph::implementation::bit_vector_subgraph::BitVectorSubgraph;
-use traitgraph::implementation::incremental_subgraph::IncrementalSubgraph;
+use traitgraph::implementation::subgraphs::bit_vector_subgraph::BitVectorSubgraph;
+use traitgraph::implementation::subgraphs::incremental_subgraph::IncrementalSubgraph;
 use traitgraph::index::GraphIndex;
-use traitgraph::interface::subgraph::DecoratingSubgraph;
+use traitgraph::interface::subgraph::{MutableSubgraph, SubgraphBase};
 use traitgraph::interface::ImmutableGraphContainer;
 use traitgraph::interface::{GraphBase, NavigableGraph, StaticGraph};
 
@@ -21,7 +21,11 @@ pub struct VaporIsPathTracker<'a, Graph> {
     join_node_count: usize,
 }
 
-impl<'a, Graph: StaticGraph> IncrementalSafetyTracker<'a, Graph> for VaporIsPathTracker<'a, Graph> {
+impl<'a, Graph: StaticGraph + SubgraphBase> IncrementalSafetyTracker<'a, Graph>
+    for VaporIsPathTracker<'a, Graph>
+where
+    <Graph as SubgraphBase>::RootGraph: ImmutableGraphContainer,
+{
     fn new_with_empty_subgraph(graph: &'a Graph) -> Self {
         Self {
             node_in_edges: vec![0; graph.node_count()],
@@ -35,9 +39,7 @@ impl<'a, Graph: StaticGraph> IncrementalSafetyTracker<'a, Graph> for VaporIsPath
     }
 
     fn clear(&mut self) {
-        if DecoratingSubgraph::node_count(&self.subgraph) == 0
-            && DecoratingSubgraph::edge_count(&self.subgraph) == 0
-        {
+        if self.subgraph.node_count() == 0 && self.subgraph.edge_count() == 0 {
             return;
         }
 
@@ -56,13 +58,13 @@ impl<'a, Graph: StaticGraph> IncrementalSafetyTracker<'a, Graph> for VaporIsPath
 
     fn reset(&mut self, r_plus: &IncrementalSubgraph<Graph>, r_minus: &IncrementalSubgraph<Graph>) {
         self.clear();
-        for node in r_plus.parent_graph().node_indices() {
-            if r_plus.contains_node(node) && r_minus.contains_node(node) {
+        for node in r_plus.root().node_indices() {
+            if r_plus.contains_node_index(node) && r_minus.contains_node_index(node) {
                 self.add_node(node);
             }
         }
-        for edge in r_plus.parent_graph().edge_indices() {
-            if r_plus.contains_edge(edge) && r_minus.contains_edge(edge) {
+        for edge in r_plus.root().edge_indices() {
+            if r_plus.contains_edge_index(edge) && r_minus.contains_edge_index(edge) {
                 self.add_edge(edge);
             }
         }
@@ -74,12 +76,12 @@ impl<'a, Graph: StaticGraph> IncrementalSafetyTracker<'a, Graph> for VaporIsPath
         r_minus: &IncrementalSubgraph<Graph>,
     ) {
         for node in r_plus.new_nodes() {
-            if r_minus.contains_node(*node) {
+            if r_minus.contains_node_index(*node) {
                 self.add_node(*node);
             }
         }
         for edge in r_plus.new_edges() {
-            if r_minus.contains_edge(*edge) {
+            if r_minus.contains_edge_index(*edge) {
                 self.add_edge(*edge);
             }
         }
@@ -118,21 +120,21 @@ impl<'a, Graph: StaticGraph> IncrementalSafetyTracker<'a, Graph> for VaporIsPath
     }
 }
 
-impl<'a, Graph: StaticGraph> VaporIsPathTracker<'a, Graph> {
+impl<'a, Graph: StaticGraph + SubgraphBase> VaporIsPathTracker<'a, Graph> {
     /// Returns true if the given node is in the subgraph.
     pub fn contains_node(&self, node: <Graph as GraphBase>::NodeIndex) -> bool {
-        self.subgraph.contains_node(node)
+        self.subgraph.contains_node_index(node)
     }
 
     /// Returns true if the given edge is in the subgraph.
     pub fn contains_edge(&self, edge: <Graph as GraphBase>::EdgeIndex) -> bool {
-        DecoratingSubgraph::contains_edge(&self.subgraph, edge)
+        self.subgraph.contains_edge_index(edge)
     }
 
     /// Add a node to the subgraph.
     pub fn add_node(&mut self, node: <Graph as GraphBase>::NodeIndex) {
-        debug_assert!(!self.subgraph.contains_node(node));
-        self.subgraph.add_node(node);
+        debug_assert!(!self.subgraph.contains_node_index(node));
+        self.subgraph.enable_node(node);
 
         let out_degree = self.subgraph.out_degree(node);
         let in_degree = self.subgraph.in_degree(node);
@@ -164,17 +166,17 @@ impl<'a, Graph: StaticGraph> VaporIsPathTracker<'a, Graph> {
     /// Add an edge to the subgraph.
     pub fn add_edge(&mut self, edge: <Graph as GraphBase>::EdgeIndex) {
         debug_assert!(
-            !DecoratingSubgraph::contains_edge(&self.subgraph, edge),
+            !self.subgraph.contains_edge_index(edge),
             "Subgraph already contains edge {:?}",
             edge
         );
-        self.subgraph.add_edge(edge);
+        self.subgraph.enable_edge(edge);
 
         let endpoints = self.subgraph.edge_endpoints(edge);
         let from_node = endpoints.from_node;
         let to_node = endpoints.to_node;
 
-        if self.subgraph.contains_node(from_node) {
+        if self.subgraph.contains_node_index(from_node) {
             self.node_out_edges[from_node.as_usize()] += 1;
 
             match self.node_out_edges[from_node.as_usize()] {
@@ -186,7 +188,7 @@ impl<'a, Graph: StaticGraph> VaporIsPathTracker<'a, Graph> {
             self.source_count += 1;
         }
 
-        if self.subgraph.contains_node(to_node) {
+        if self.subgraph.contains_node_index(to_node) {
             self.node_in_edges[to_node.as_usize()] += 1;
 
             match self.node_in_edges[to_node.as_usize()] {
@@ -201,11 +203,11 @@ impl<'a, Graph: StaticGraph> VaporIsPathTracker<'a, Graph> {
 
     /// Remove a node from the subgraph.
     pub fn remove_node(&mut self, node: <Graph as GraphBase>::NodeIndex) {
-        debug_assert!(self.subgraph.contains_node(node));
+        debug_assert!(self.subgraph.contains_node_index(node));
 
         let out_degree = self.subgraph.out_degree(node);
         let in_degree = self.subgraph.in_degree(node);
-        self.subgraph.remove_node(node);
+        self.subgraph.disable_node(node);
 
         self.node_in_edges[node.as_usize()] = 0;
         self.node_out_edges[node.as_usize()] = 0;
@@ -233,14 +235,14 @@ impl<'a, Graph: StaticGraph> VaporIsPathTracker<'a, Graph> {
 
     /// Remove an edge from the subgraph.
     pub fn remove_edge(&mut self, edge: <Graph as GraphBase>::EdgeIndex) {
-        debug_assert!(DecoratingSubgraph::contains_edge(&self.subgraph, edge));
+        debug_assert!(self.subgraph.contains_edge_index(edge));
 
         let endpoints = self.subgraph.edge_endpoints(edge);
-        self.subgraph.remove_edge(edge);
+        self.subgraph.disable_edge(edge);
         let from_node = endpoints.from_node;
         let to_node = endpoints.to_node;
 
-        if self.subgraph.contains_node(from_node) {
+        if self.subgraph.contains_node_index(from_node) {
             self.node_out_edges[from_node.as_usize()] -= 1;
 
             match self.node_out_edges[from_node.as_usize()] {
@@ -252,7 +254,7 @@ impl<'a, Graph: StaticGraph> VaporIsPathTracker<'a, Graph> {
             self.source_count -= 1;
         }
 
-        if self.subgraph.contains_node(to_node) {
+        if self.subgraph.contains_node_index(to_node) {
             self.node_in_edges[to_node.as_usize()] -= 1;
 
             match self.node_in_edges[to_node.as_usize()] {
@@ -266,17 +268,19 @@ impl<'a, Graph: StaticGraph> VaporIsPathTracker<'a, Graph> {
     }
 }
 
-impl<'a, Graph: ImmutableGraphContainer> std::fmt::Debug for VaporIsPathTracker<'a, Graph>
+impl<'a, Graph: ImmutableGraphContainer + SubgraphBase> std::fmt::Debug
+    for VaporIsPathTracker<'a, Graph>
 where
     Graph::NodeIndex: std::fmt::Debug,
     Graph::EdgeIndex: std::fmt::Debug,
+    <Graph as SubgraphBase>::RootGraph: ImmutableGraphContainer,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "VaporIsPathTracker[nodes: [")?;
 
         let mut once = true;
-        for node in self.subgraph.parent_graph().node_indices() {
-            if self.subgraph.contains_node(node) {
+        for node in self.subgraph.root().node_indices() {
+            if self.subgraph.contains_node_index(node) {
                 if once {
                     once = false;
                 } else {
@@ -289,8 +293,8 @@ where
         write!(f, "], edges: [")?;
 
         let mut once = true;
-        for edge in self.subgraph.parent_graph().edge_indices() {
-            if self.subgraph.contains_edge(edge) {
+        for edge in self.subgraph.root().edge_indices() {
+            if self.subgraph.contains_edge_index(edge) {
                 if once {
                     once = false;
                 } else {

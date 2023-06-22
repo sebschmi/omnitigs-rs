@@ -24,6 +24,7 @@ use std::cmp::Ordering;
 use std::iter::FromIterator;
 use std::mem;
 use traitgraph::index::GraphIndex;
+use traitgraph::interface::subgraph::SubgraphBase;
 use traitgraph::interface::{GraphBase, StaticGraph};
 use traitgraph::walks::{EdgeWalk, VecEdgeWalk, VecNodeWalk};
 use traitsequence::interface::Sequence;
@@ -204,7 +205,7 @@ pub struct Omnitigs<Graph: GraphBase> {
     omnitigs_per_macrotig: Vec<usize>,
 }
 
-impl<Graph: StaticGraph> Omnitigs<Graph> {
+impl<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>> Omnitigs<Graph> {
     /// Computes the maximal omnitigs of the given graph.
     pub fn compute(graph: &Graph) -> Self {
         let maximal_macrotigs = Macrotigs::compute(graph);

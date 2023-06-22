@@ -4,17 +4,17 @@ use crate::restricted_reachability::{
     compute_inverse_restricted_forward_reachability, compute_restricted_backward_reachability,
     compute_restricted_forward_reachability,
 };
-use traitgraph::implementation::bit_vector_subgraph::BitVectorSubgraph;
-use traitgraph::interface::subgraph::DecoratingSubgraph;
-use traitgraph::interface::NavigableGraph;
+use traitgraph::implementation::subgraphs::bit_vector_subgraph::BitVectorSubgraph;
+use traitgraph::interface::subgraph::SubgraphBase;
 use traitgraph::interface::StaticGraph;
+use traitgraph::interface::{ImmutableGraphContainer, NavigableGraph};
 use traitgraph::walks::VecEdgeWalk;
 use traitsequence::interface::Sequence;
 
 /// Compute the maximal microtigs of a strongly connected graph using hydrostructure-based queries.
 pub struct StronglyConnectedHydrostructureBasedMaximalMicrotigs;
 
-impl<Graph: StaticGraph> MaximalMicrotigsAlgorithm<Graph>
+impl<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>> MaximalMicrotigsAlgorithm<Graph>
     for StronglyConnectedHydrostructureBasedMaximalMicrotigs
 {
     fn compute_maximal_microtigs(
@@ -44,13 +44,14 @@ impl<Graph: StaticGraph> MaximalMicrotigsAlgorithm<Graph>
                     "Found sink, but this algorithm requires the graph to be strongly connected",
                 )
                 .edge_id;
-            let inverse_r_plus: BitVectorSubgraph<_> =
-                compute_inverse_restricted_forward_reachability(graph, out_edge);
+            let mut inverse_r_plus = BitVectorSubgraph::new_empty(graph);
+            compute_inverse_restricted_forward_reachability(graph, out_edge, &mut inverse_r_plus);
+            let inverse_r_plus = inverse_r_plus;
 
             // From the inverse restricted forward reachability, there are two cases:
             //  * It found exactly one incoming edge into the macronode center. Then that edge is a candidate for a separate central-micro omnitig.
             //  * It found more than one incoming edge into the macronode center. Then the only possible central-micro omnitig ends with out_edge.
-            debug_assert!(inverse_r_plus.contains_node(center_in_node) || center_in_node == center_out_node, "Inverse restricted forward reachability did not find the first node of the macronode center, even though the macronode center has more than one node.");
+            debug_assert!(inverse_r_plus.contains_node_index(center_in_node) || center_in_node == center_out_node, "Inverse restricted forward reachability did not find the first node of the macronode center, even though the macronode center has more than one node.");
             let in_edge_candidates: Vec<_> = inverse_r_plus
                 .in_neighbors(center_in_node)
                 .map(|n| n.edge_id)
@@ -168,11 +169,13 @@ impl<Graph: StaticGraph> MaximalMicrotigsAlgorithm<Graph>
 /// In case the returned omnitig would be trivial, we return `None`, since then it does not have its macronode center as proper subwalk, so it is not a right-micro omnitig.
 ///
 /// To handle the bivalent paths between maximal microtigs correctly, a right-micro omnitig is defined to end in the last edge of a bivalent path if it ends in a bivalent path.
-fn extend_right_micro_omnitig<Graph: StaticGraph>(
+fn extend_right_micro_omnitig<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>>(
     graph: &Graph,
     first_edge: Graph::EdgeIndex,
 ) -> Option<VecEdgeWalk<Graph>> {
-    let r_minus: BitVectorSubgraph<_> = compute_restricted_backward_reachability(graph, first_edge);
+    let mut r_minus = BitVectorSubgraph::new_empty(graph);
+    compute_restricted_backward_reachability(graph, first_edge, &mut r_minus);
+    let r_minus = r_minus;
     let mut rmo = vec![first_edge];
     let mut current_node = graph.edge_endpoints(first_edge).to_node;
     // Set to true if our omnitig is non-trivial. We return None otherwise.
@@ -214,11 +217,13 @@ fn extend_right_micro_omnitig<Graph: StaticGraph>(
 /// In case the returned omnitig would be trivial, we return `None`, since then it does not have its macronode center as proper subwalk, so it is not a left-micro omnitig.
 ///
 /// To handle the bivalent paths between maximal microtigs correctly, a left-micro omnitig is defined to end in the last edge of a bivalent path if it ends in a bivalent path.
-fn extend_left_micro_omnitig<Graph: StaticGraph>(
+fn extend_left_micro_omnitig<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>>(
     graph: &Graph,
     first_edge: Graph::EdgeIndex,
 ) -> Option<VecEdgeWalk<Graph>> {
-    let r_plus: BitVectorSubgraph<_> = compute_restricted_forward_reachability(graph, first_edge);
+    let mut r_plus = BitVectorSubgraph::new_empty(graph);
+    compute_restricted_forward_reachability(graph, first_edge, &mut r_plus);
+    let r_plus = r_plus;
     let mut lmo = vec![first_edge];
     // Since we want to end in the last edge of a bivalent path, we collect our edges in this vector first,
     // and only flush them whenever we found a join edge.

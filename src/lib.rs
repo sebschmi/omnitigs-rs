@@ -10,6 +10,8 @@ pub mod hamiltonian;
 pub mod hydrostructure;
 /// Algorithms to compute macrotigs.
 pub mod macrotigs;
+/// Algorithms to compute maximal safe walks under the node-covering node-visible multi-circular walk model.
+pub mod node_covering_node_visible_multi_circular_safe;
 /// Algorithms to compute maximal safe walks under the node-covering node-visible 1-circular walk model.
 pub mod node_covering_node_visible_one_circular_safe;
 /// Algorithms to extract omnitigs from a graph.

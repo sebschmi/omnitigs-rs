@@ -1,5 +1,6 @@
 use crate::macrotigs::microtigs::{Microtigs, MaximalMicrotigsAlgorithm};
 use traitgraph::interface::{GraphBase, StaticGraph};
+use traitgraph::interface::subgraph::SubgraphBase;
 use traitgraph::walks::VecEdgeWalk;
 use crate::macrotigs::macronodes::strongly_connected_macronode_algorithm::StronglyConnectedMacronodes;
 use crate::macrotigs::microtigs::strongly_connected_hydrostructure_based_maximal_microtig_algorithm::StronglyConnectedHydrostructureBasedMaximalMicrotigs;
@@ -16,7 +17,7 @@ pub struct Macrotigs<Graph: GraphBase> {
     macrotigs: Vec<VecEdgeWalk<Graph>>,
 }
 
-impl<Graph: StaticGraph> Macrotigs<Graph> {
+impl<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>> Macrotigs<Graph> {
     /// Computes the maximal macrotigs of the given graph.
     pub fn compute(graph: &Graph) -> Self {
         let macronodes = StronglyConnectedMacronodes::compute_macronodes(graph);

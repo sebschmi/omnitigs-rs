@@ -1,5 +1,5 @@
 use crate::hydrostructure::incremental_hydrostructure::IncrementalSafetyTracker;
-use traitgraph::implementation::incremental_subgraph::IncrementalSubgraph;
+use traitgraph::implementation::subgraphs::incremental_subgraph::IncrementalSubgraph;
 use traitgraph::interface::GraphBase;
 
 /// An incremental safety tracker that tracks safety using the conjunction of two other safety trackers.

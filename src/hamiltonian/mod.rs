@@ -1,9 +1,10 @@
-use crate::macrotigs::macrotigs::Macrotigs;
+/*use crate::macrotigs::macrotigs::Macrotigs;
 use crate::node_covering_node_visible_one_circular_safe::compute_maximal_node_covering_node_visible_one_circular_safe_walks;
 use bitvector::BitVector;
 use std::collections::{BTreeMap, BTreeSet};
 use traitgraph::index::GraphIndex;
 use traitgraph::index::OptionalGraphIndex;
+use traitgraph::interface::subgraph::SubgraphBase;
 use traitgraph::interface::{DynamicGraph, ImmutableGraphContainer, StaticGraph};
 use traitgraph::walks::VecNodeWalk;
 use traitgraph_algo::components::{is_cycle, is_strongly_connected};
@@ -228,7 +229,11 @@ fn do_walks_cover_all_nodes<Graph: ImmutableGraphContainer>(
 
 /// Returns a reduced graph that is hamiltonian if and only if the input graph is hamiltonian,
 /// or returns `None` if the graph can be proven to not be hamiltonian (which equals to the reduction being impossible).
-pub fn preprocess_hamiltonian_circuit<Graph: DynamicGraph + Default>(graph: &Graph) -> Option<Graph>
+pub fn preprocess_hamiltonian_circuit<
+    Graph: DynamicGraph + Default + SubgraphBase<RootGraph = Graph>,
+>(
+    graph: &Graph,
+) -> Option<Graph>
 where
     Graph::NodeIndex: 'static,
     Graph::NodeData: Default,
@@ -647,4 +652,4 @@ mod tests {
             vec![true, true, true, true, true, true, true, true, true, true]
         );
     }
-}
+}*/

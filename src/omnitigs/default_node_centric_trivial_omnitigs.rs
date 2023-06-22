@@ -15,12 +15,12 @@ pub struct DefaultTrivialNodeCentricOmnitigAlgorithm<NodeCentricUnivocalExtensio
 }
 
 /// An algorithm to extract trivial omnitigs form a strongly connected graph.
-pub type SccTrivialOmnitigAlgorithm =
+pub type SccTrivialNodeCentricOmnitigAlgorithm =
     DefaultTrivialNodeCentricOmnitigAlgorithm<SccNodeCentricUnivocalExtensionStrategy>;
 
 /// An algorithm to extract trivial omnitigs form a not strongly connected graph.
 /// This runs slightly slower than the counterpart for strongly connected graphs, especially for long univocal extensions.
-pub type NonSccTrivialOmnitigAlgorithm =
+pub type NonSccTrivialNodeCentricOmnitigAlgorithm =
     DefaultTrivialNodeCentricOmnitigAlgorithm<NonSccNodeCentricUnivocalExtensionStrategy>;
 
 impl<

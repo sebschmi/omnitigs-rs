@@ -2,13 +2,13 @@ use crate::hydrostructure::Hydrostructure;
 use crate::restricted_reachability::{
     compute_hydrostructure_backward_reachability, compute_hydrostructure_forward_reachability,
 };
-use traitgraph::implementation::bit_vector_subgraph::BitVectorSubgraph;
-use traitgraph::interface::subgraph::DecoratingSubgraph;
-use traitgraph::interface::{GraphBase, StaticGraph};
+use traitgraph::implementation::subgraphs::bit_vector_subgraph::BitVectorSubgraph;
+use traitgraph::interface::subgraph::{EmptyConstructibleSubgraph, MutableSubgraph, SubgraphBase};
+use traitgraph::interface::{GraphBase, ImmutableGraphContainer, NavigableGraph, StaticGraph};
 use traitgraph::walks::VecEdgeWalk;
 
 /// The hydrostructure for a walk aZb.
-pub enum StaticHydrostructure<Graph: GraphBase, SubgraphType> {
+pub enum StaticHydrostructure<SubgraphType: SubgraphBase> {
     /// In case the walk is bridge-like, `r_plus` and `r_minus` will be proper subgraphs.
     BridgeLike {
         /// The set `R⁺(aZb)`, defined as everything reachable from the first edge of `aZb` without using `aZb` as subwalk.
@@ -16,22 +16,30 @@ pub enum StaticHydrostructure<Graph: GraphBase, SubgraphType> {
         /// The set `R⁻(aZb)`, defined as everything backwards reachable from the last edge of `aZb` without using `aZb` as subwalk.
         r_minus: SubgraphType,
         /// The walk the hydrostructure corresponds to.
-        azb: VecEdgeWalk<Graph>,
+        azb: VecEdgeWalk<SubgraphType::RootGraph>,
     },
     /// In case the walk is avertible, the whole graph is in the vapor, so no subgraphs need to be stored.
     Avertible {
         /// The walk the hydrostructure corresponds to.
-        azb: VecEdgeWalk<Graph>,
+        azb: VecEdgeWalk<SubgraphType::RootGraph>,
     },
 }
 
-impl<'a, Graph: StaticGraph> StaticHydrostructure<Graph, BitVectorSubgraph<'a, Graph>> {
+impl<'a, Graph: StaticGraph + SubgraphBase<RootGraph = Graph>>
+    StaticHydrostructure<BitVectorSubgraph<'a, Graph>>
+where
+    <Graph as SubgraphBase>::RootGraph: NavigableGraph,
+{
     /// Compute the hydrostructure of a walk, representing `R⁺(aZb)` and `R⁻(aZb)` as `BitVectorSubgraph`s.
     pub fn compute_with_bitvector_subgraph(graph: &'a Graph, azb: VecEdgeWalk<Graph>) -> Self {
-        let r_plus = compute_hydrostructure_forward_reachability(graph, &azb);
-        let r_minus = compute_hydrostructure_backward_reachability(graph, &azb);
+        let mut r_plus = BitVectorSubgraph::new_empty(graph);
+        let r_plus_bridge_like =
+            compute_hydrostructure_forward_reachability(graph, &azb, &mut r_plus);
+        let mut r_minus = BitVectorSubgraph::new_empty(graph);
+        let r_minus_bridge_like =
+            compute_hydrostructure_backward_reachability(graph, &azb, &mut r_minus);
 
-        if let (Some(r_plus), Some(r_minus)) = (r_plus, r_minus) {
+        if r_plus_bridge_like && r_minus_bridge_like {
             Self::BridgeLike {
                 r_plus,
                 r_minus,
@@ -45,15 +53,16 @@ impl<'a, Graph: StaticGraph> StaticHydrostructure<Graph, BitVectorSubgraph<'a, G
 
 impl<
         'a,
-        Graph: 'a + StaticGraph,
-        SubgraphType: DecoratingSubgraph<ParentGraph = Graph, ParentGraphRef = &'a Graph>,
-    > StaticHydrostructure<Graph, SubgraphType>
+        SubgraphType: SubgraphBase + MutableSubgraph + EmptyConstructibleSubgraph<'a> + ImmutableGraphContainer,
+    > StaticHydrostructure<SubgraphType>
+where
+    <SubgraphType as SubgraphBase>::RootGraph: NavigableGraph,
 {
     /// Initialise the hydrostructure of a _bridge-like_ walk `aZb` with given sets `R⁺(aZb)`, `R⁻(aZb)`.
     pub fn new_bridge_like(
         r_plus: SubgraphType,
         r_minus: SubgraphType,
-        azb: VecEdgeWalk<Graph>,
+        azb: VecEdgeWalk<SubgraphType::RootGraph>,
     ) -> Self {
         Self::BridgeLike {
             r_plus,
@@ -63,16 +72,23 @@ impl<
     }
 
     /// Initialise the hydrostructure of an _avertible_ walk `aZb`.
-    pub fn new_avertible(azb: VecEdgeWalk<Graph>) -> Self {
+    pub fn new_avertible(azb: VecEdgeWalk<SubgraphType::RootGraph>) -> Self {
         Self::Avertible { azb }
     }
 
     /// Compute the hydrostructure of a walk.
-    pub fn compute(graph: SubgraphType::ParentGraphRef, azb: VecEdgeWalk<Graph>) -> Self {
-        let r_plus = compute_hydrostructure_forward_reachability(graph, &azb);
-        let r_minus = compute_hydrostructure_backward_reachability(graph, &azb);
+    pub fn compute(
+        graph: &'a SubgraphType::RootGraph,
+        azb: VecEdgeWalk<SubgraphType::RootGraph>,
+    ) -> Self {
+        let mut r_plus = SubgraphType::new_empty(graph);
+        let r_plus_bridge_like =
+            compute_hydrostructure_forward_reachability(graph, &azb, &mut r_plus);
+        let mut r_minus = SubgraphType::new_empty(graph);
+        let r_minus_bridge_like =
+            compute_hydrostructure_backward_reachability(graph, &azb, &mut r_minus);
 
-        if let (Some(r_plus), Some(r_minus)) = (r_plus, r_minus) {
+        if r_plus_bridge_like && r_minus_bridge_like {
             Self::BridgeLike {
                 r_plus,
                 r_minus,
@@ -84,53 +100,50 @@ impl<
     }
 }
 
-impl<
-        'a,
-        Graph: 'a + GraphBase,
-        SubgraphType: DecoratingSubgraph<ParentGraph = Graph, ParentGraphRef = &'a Graph>,
-    > Hydrostructure<Graph::NodeIndex, Graph::EdgeIndex>
-    for StaticHydrostructure<Graph, SubgraphType>
+impl<SubgraphType: SubgraphBase + ImmutableGraphContainer>
+    Hydrostructure<<SubgraphType as GraphBase>::NodeIndex, <SubgraphType as GraphBase>::EdgeIndex>
+    for StaticHydrostructure<SubgraphType>
 {
-    fn is_node_r_plus(&self, node: <Graph as GraphBase>::NodeIndex) -> bool {
+    fn is_node_r_plus(&self, node: <SubgraphType as GraphBase>::NodeIndex) -> bool {
         match self {
             StaticHydrostructure::BridgeLike {
                 r_plus,
                 r_minus: _,
                 azb: _,
-            } => r_plus.contains_node(node),
+            } => r_plus.contains_node_index(node),
             StaticHydrostructure::Avertible { azb: _ } => true,
         }
     }
 
-    fn is_node_r_minus(&self, node: <Graph as GraphBase>::NodeIndex) -> bool {
+    fn is_node_r_minus(&self, node: <SubgraphType as GraphBase>::NodeIndex) -> bool {
         match self {
             StaticHydrostructure::BridgeLike {
                 r_plus: _,
                 r_minus,
                 azb: _,
-            } => r_minus.contains_node(node),
+            } => r_minus.contains_node_index(node),
             StaticHydrostructure::Avertible { azb: _ } => true,
         }
     }
 
-    fn is_edge_r_plus(&self, edge: <Graph as GraphBase>::EdgeIndex) -> bool {
+    fn is_edge_r_plus(&self, edge: <SubgraphType as GraphBase>::EdgeIndex) -> bool {
         match self {
             StaticHydrostructure::BridgeLike {
                 r_plus,
                 r_minus: _,
                 azb: _,
-            } => r_plus.contains_edge(edge),
+            } => r_plus.contains_edge_index(edge),
             StaticHydrostructure::Avertible { azb: _ } => true,
         }
     }
 
-    fn is_edge_r_minus(&self, edge: <Graph as GraphBase>::EdgeIndex) -> bool {
+    fn is_edge_r_minus(&self, edge: <SubgraphType as GraphBase>::EdgeIndex) -> bool {
         match self {
             StaticHydrostructure::BridgeLike {
                 r_plus: _,
                 r_minus,
                 azb: _,
-            } => r_minus.contains_edge(edge),
+            } => r_minus.contains_edge_index(edge),
             StaticHydrostructure::Avertible { azb: _ } => true,
         }
     }
@@ -152,9 +165,8 @@ mod tests {
     use super::StaticHydrostructure;
     use crate::hydrostructure::Hydrostructure;
     use traitgraph::implementation::petgraph_impl::PetGraph;
-    use traitgraph::interface::subgraph::DecoratingSubgraph;
-    use traitgraph::interface::MutableGraphContainer;
     use traitgraph::interface::WalkableGraph;
+    use traitgraph::interface::{ImmutableGraphContainer, MutableGraphContainer};
 
     #[test]
     fn test_hydrostructure_avertible_by_shortcut() {
@@ -240,37 +252,37 @@ mod tests {
                 r_minus,
                 azb: _,
             } => {
-                debug_assert!(!r_plus.contains_node(n0));
-                debug_assert!(r_plus.contains_node(n1));
-                debug_assert!(r_plus.contains_node(n2));
-                debug_assert!(!r_plus.contains_node(n3));
-                debug_assert!(!r_plus.contains_node(n4));
-                debug_assert!(!r_plus.contains_node(n5));
+                debug_assert!(!r_plus.contains_node_index(n0));
+                debug_assert!(r_plus.contains_node_index(n1));
+                debug_assert!(r_plus.contains_node_index(n2));
+                debug_assert!(!r_plus.contains_node_index(n3));
+                debug_assert!(!r_plus.contains_node_index(n4));
+                debug_assert!(!r_plus.contains_node_index(n5));
 
-                debug_assert!(r_plus.contains_edge(e1));
-                debug_assert!(r_plus.contains_edge(e2));
-                debug_assert!(!r_plus.contains_edge(e3));
-                debug_assert!(!r_plus.contains_edge(e4));
-                debug_assert!(!r_plus.contains_edge(e5));
-                debug_assert!(!r_plus.contains_edge(e6));
-                debug_assert!(!r_plus.contains_edge(e7));
-                debug_assert!(!r_plus.contains_edge(e8));
+                debug_assert!(r_plus.contains_edge_index(e1));
+                debug_assert!(r_plus.contains_edge_index(e2));
+                debug_assert!(!r_plus.contains_edge_index(e3));
+                debug_assert!(!r_plus.contains_edge_index(e4));
+                debug_assert!(!r_plus.contains_edge_index(e5));
+                debug_assert!(!r_plus.contains_edge_index(e6));
+                debug_assert!(!r_plus.contains_edge_index(e7));
+                debug_assert!(!r_plus.contains_edge_index(e8));
 
-                debug_assert!(!r_minus.contains_node(n0));
-                debug_assert!(r_minus.contains_node(n1));
-                debug_assert!(r_minus.contains_node(n2));
-                debug_assert!(!r_minus.contains_node(n3));
-                debug_assert!(!r_minus.contains_node(n4));
-                debug_assert!(!r_minus.contains_node(n5));
+                debug_assert!(!r_minus.contains_node_index(n0));
+                debug_assert!(r_minus.contains_node_index(n1));
+                debug_assert!(r_minus.contains_node_index(n2));
+                debug_assert!(!r_minus.contains_node_index(n3));
+                debug_assert!(!r_minus.contains_node_index(n4));
+                debug_assert!(!r_minus.contains_node_index(n5));
 
-                debug_assert!(!r_minus.contains_edge(e1));
-                debug_assert!(r_minus.contains_edge(e2));
-                debug_assert!(r_minus.contains_edge(e3));
-                debug_assert!(!r_minus.contains_edge(e4));
-                debug_assert!(!r_minus.contains_edge(e5));
-                debug_assert!(!r_minus.contains_edge(e6));
-                debug_assert!(!r_minus.contains_edge(e7));
-                debug_assert!(!r_minus.contains_edge(e8));
+                debug_assert!(!r_minus.contains_edge_index(e1));
+                debug_assert!(r_minus.contains_edge_index(e2));
+                debug_assert!(r_minus.contains_edge_index(e3));
+                debug_assert!(!r_minus.contains_edge_index(e4));
+                debug_assert!(!r_minus.contains_edge_index(e5));
+                debug_assert!(!r_minus.contains_edge_index(e6));
+                debug_assert!(!r_minus.contains_edge_index(e7));
+                debug_assert!(!r_minus.contains_edge_index(e8));
             }
             _ => panic!("Not bridge like"),
         }
@@ -317,43 +329,43 @@ mod tests {
                 r_minus,
                 azb: _,
             } => {
-                debug_assert!(r_plus.contains_node(n0));
-                debug_assert!(r_plus.contains_node(n1));
-                debug_assert!(r_plus.contains_node(n2));
-                debug_assert!(!r_plus.contains_node(n3));
-                debug_assert!(r_plus.contains_node(n4));
-                debug_assert!(!r_plus.contains_node(n5));
-                debug_assert!(!r_plus.contains_node(n6));
+                debug_assert!(r_plus.contains_node_index(n0));
+                debug_assert!(r_plus.contains_node_index(n1));
+                debug_assert!(r_plus.contains_node_index(n2));
+                debug_assert!(!r_plus.contains_node_index(n3));
+                debug_assert!(r_plus.contains_node_index(n4));
+                debug_assert!(!r_plus.contains_node_index(n5));
+                debug_assert!(!r_plus.contains_node_index(n6));
 
-                debug_assert!(r_plus.contains_edge(e1));
-                debug_assert!(r_plus.contains_edge(e2));
-                debug_assert!(!r_plus.contains_edge(e3));
-                debug_assert!(!r_plus.contains_edge(e4));
-                debug_assert!(!r_plus.contains_edge(e5));
-                debug_assert!(r_plus.contains_edge(e6));
-                debug_assert!(!r_plus.contains_edge(e7));
-                debug_assert!(r_plus.contains_edge(e8));
-                debug_assert!(!r_plus.contains_edge(e9));
-                debug_assert!(!r_plus.contains_edge(e10));
+                debug_assert!(r_plus.contains_edge_index(e1));
+                debug_assert!(r_plus.contains_edge_index(e2));
+                debug_assert!(!r_plus.contains_edge_index(e3));
+                debug_assert!(!r_plus.contains_edge_index(e4));
+                debug_assert!(!r_plus.contains_edge_index(e5));
+                debug_assert!(r_plus.contains_edge_index(e6));
+                debug_assert!(!r_plus.contains_edge_index(e7));
+                debug_assert!(r_plus.contains_edge_index(e8));
+                debug_assert!(!r_plus.contains_edge_index(e9));
+                debug_assert!(!r_plus.contains_edge_index(e10));
 
-                debug_assert!(!r_minus.contains_node(n0));
-                debug_assert!(r_minus.contains_node(n1));
-                debug_assert!(r_minus.contains_node(n2));
-                debug_assert!(r_minus.contains_node(n3));
-                debug_assert!(!r_minus.contains_node(n4));
-                debug_assert!(r_minus.contains_node(n5));
-                debug_assert!(!r_minus.contains_node(n6));
+                debug_assert!(!r_minus.contains_node_index(n0));
+                debug_assert!(r_minus.contains_node_index(n1));
+                debug_assert!(r_minus.contains_node_index(n2));
+                debug_assert!(r_minus.contains_node_index(n3));
+                debug_assert!(!r_minus.contains_node_index(n4));
+                debug_assert!(r_minus.contains_node_index(n5));
+                debug_assert!(!r_minus.contains_node_index(n6));
 
-                debug_assert!(!r_minus.contains_edge(e1));
-                debug_assert!(r_minus.contains_edge(e2));
-                debug_assert!(r_minus.contains_edge(e3));
-                debug_assert!(!r_minus.contains_edge(e4));
-                debug_assert!(r_minus.contains_edge(e5));
-                debug_assert!(!r_minus.contains_edge(e6));
-                debug_assert!(!r_minus.contains_edge(e7));
-                debug_assert!(!r_minus.contains_edge(e8));
-                debug_assert!(r_minus.contains_edge(e9));
-                debug_assert!(!r_minus.contains_edge(e10));
+                debug_assert!(!r_minus.contains_edge_index(e1));
+                debug_assert!(r_minus.contains_edge_index(e2));
+                debug_assert!(r_minus.contains_edge_index(e3));
+                debug_assert!(!r_minus.contains_edge_index(e4));
+                debug_assert!(r_minus.contains_edge_index(e5));
+                debug_assert!(!r_minus.contains_edge_index(e6));
+                debug_assert!(!r_minus.contains_edge_index(e7));
+                debug_assert!(!r_minus.contains_edge_index(e8));
+                debug_assert!(r_minus.contains_edge_index(e9));
+                debug_assert!(!r_minus.contains_edge_index(e10));
             }
             _ => panic!("Not bridge like"),
         }

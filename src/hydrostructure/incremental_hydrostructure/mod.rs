@@ -5,15 +5,17 @@ use crate::restricted_reachability::{
     compute_incremental_restricted_backward_edge_reachability,
     compute_incremental_restricted_forward_edge_reachability,
 };
-use traitgraph::implementation::incremental_subgraph::IncrementalSubgraph;
-use traitgraph::interface::subgraph::DecoratingSubgraph;
-use traitgraph::interface::{GraphBase, StaticGraph};
+use traitgraph::implementation::subgraphs::incremental_subgraph::IncrementalSubgraph;
+use traitgraph::interface::subgraph::SubgraphBase;
+use traitgraph::interface::{GraphBase, ImmutableGraphContainer, NavigableGraph, StaticGraph};
 use vapor_is_path_tracker::VaporIsPathTracker;
 
 /// A type that combines two safety trackers under conjunction.
 pub mod conjunctive_safety_tracker;
 /// A type that keeps counts of the nodes in the different hydrostructure components to dynamically determine if they contain nodes.
 pub mod node_centric_component_tracker;
+/// A type that tracks if the river, sea or cloud contain an SCC of size one.
+pub mod size_one_scc_tracker;
 /// A type that keeps counts about nodes and edges in a subgraph to dynamically determine if the subgraph is a path.
 pub mod vapor_is_path_tracker;
 
@@ -29,6 +31,17 @@ pub type NodeBridgeLikeIncrementalHydrostructure<'graph, 'walk, Graph> = Increme
     Graph,
     ConjunctiveSafetyTracker<VaporIsPathTracker<'graph, Graph>, NodeCentricComponentTracker>,
 >;
+
+/* /// An incremental hydrostructure that checks if the node sequence (including the tail of the last arc and the head of the first arc)
+/// of a subwalk is safe in the node-visible node-covering multi-closed walk model.
+pub type NodeMultiSafeIncrementalHydrostructure<'graph, 'walk, Graph> = IncrementalHydrostructure<
+    'graph,
+    'walk,
+    Graph,
+    ConjunctiveSafetyTracker<
+        ConjunctiveSafetyTracker<VaporIsPathTracker<'graph, Graph>, NodeCentricComponentTracker>,
+    >,
+>;*/
 
 /// The hydrostructure for a walk `W`.
 /// This hydrostructure implementation is incremental, meaning that it is valid for any subwalk of `W`.
@@ -60,9 +73,11 @@ pub struct IncrementalHydrostructure<
 impl<
         'graph,
         'walk,
-        Graph: 'graph + StaticGraph,
+        Graph: 'graph + StaticGraph + SubgraphBase,
         SafetyTracker: IncrementalSafetyTracker<'graph, Graph>,
     > IncrementalHydrostructure<'graph, 'walk, Graph, SafetyTracker>
+where
+    <Graph as SubgraphBase>::RootGraph: NavigableGraph,
 {
     /// Compute the incremental hydrostructure of a walk.
     /// Sets the fingers to cover the whole walk.
@@ -174,7 +189,7 @@ impl<
             .take(self.right_finger + 1)
             .skip(self.left_finger + 1)
             .rev()
-            .filter(|(_, e)| self.r_plus.parent_graph().is_split_edge(**e))
+            .filter(|(_, e)| self.r_plus.root().is_split_edge(**e))
             .map(|(n, _)| n)
             .next();
         self.rightmost_join = self
@@ -184,7 +199,7 @@ impl<
             .take(self.right_finger)
             .skip(self.left_finger)
             .rev()
-            .filter(|(_, e)| self.r_plus.parent_graph().is_join_edge(**e))
+            .filter(|(_, e)| self.r_plus.root().is_join_edge(**e))
             .map(|(n, _)| n)
             .next();
     }
@@ -271,7 +286,7 @@ impl<
     pub fn increment_right_finger(&mut self) {
         if self
             .r_plus
-            .parent_graph()
+            .root()
             .is_join_edge(self.walk[self.right_finger])
         {
             self.rightmost_join = Some(self.right_finger);
@@ -283,7 +298,7 @@ impl<
 
         if self
             .r_plus
-            .parent_graph()
+            .root()
             .is_split_edge(self.walk[self.right_finger])
         {
             self.rightmost_split = Some(self.right_finger);
@@ -309,7 +324,7 @@ impl<
             .iter()
             .take(self.right_finger)
             .skip(self.left_finger)
-            .map(|e| self.r_plus.parent_graph().edge_endpoints(*e).to_node)
+            .map(|e| self.r_plus.root().edge_endpoints(*e).to_node)
             .any(|n| n == node)
     }
 
@@ -334,7 +349,7 @@ impl<
     /// Check if a node is in r_plus under the assumption that the current walk is bridge-like.
     fn is_node_r_plus_bridge_like(&self, node: <Graph as GraphBase>::NodeIndex) -> bool {
         if self.rightmost_split.is_some() {
-            self.r_plus.contains_node(node)
+            self.r_plus.contains_node_index(node)
         } else {
             self.is_node_in_trivial_r_plus_r_minus(node)
         }
@@ -343,7 +358,7 @@ impl<
     /// Check if a node is in r_minus under the assumption that the current walk is bridge-like.
     fn is_node_r_minus_bridge_like(&self, node: <Graph as GraphBase>::NodeIndex) -> bool {
         if self.rightmost_join.is_some() {
-            self.r_minus.contains_node(node)
+            self.r_minus.contains_node_index(node)
         } else {
             self.is_node_in_trivial_r_plus_r_minus(node)
         }
@@ -352,7 +367,7 @@ impl<
     /// Check if an edge is in r_plus under the assumption that the current walk is bridge-like.
     fn is_edge_r_plus_bridge_like(&self, edge: <Graph as GraphBase>::EdgeIndex) -> bool {
         if self.rightmost_split.is_some() {
-            DecoratingSubgraph::contains_edge(&self.r_plus, edge)
+            self.r_plus.contains_edge_index(edge)
         } else {
             self.is_edge_in_trivial_r_plus(edge)
         }
@@ -361,7 +376,7 @@ impl<
     /// Check if an edge is in r_minus under the assumption that the current walk is bridge-like.
     fn is_edge_r_minus_bridge_like(&self, edge: <Graph as GraphBase>::EdgeIndex) -> bool {
         if self.rightmost_join.is_some() {
-            DecoratingSubgraph::contains_edge(&self.r_minus, edge)
+            self.r_minus.contains_edge_index(edge)
         } else {
             self.is_edge_in_trivial_r_minus(edge)
         }
@@ -379,10 +394,12 @@ impl<
 impl<
         'graph,
         'walk,
-        Graph: 'graph + StaticGraph,
+        Graph: 'graph + StaticGraph + SubgraphBase,
         SafetyTracker: IncrementalSafetyTracker<'graph, Graph>,
     > Hydrostructure<Graph::NodeIndex, Graph::EdgeIndex>
     for IncrementalHydrostructure<'graph, 'walk, Graph, SafetyTracker>
+where
+    <Graph as SubgraphBase>::RootGraph: NavigableGraph,
 {
     fn is_node_r_plus(&self, node: <Graph as GraphBase>::NodeIndex) -> bool {
         if self.is_bridge_like() {
@@ -503,6 +520,7 @@ mod tests {
         let e0 = graph.add_edge(n0, n1, ());
         let e1 = graph.add_edge(n1, n2, ());
         let e2 = graph.add_edge(n2, n3, ());
+        let graph = graph;
 
         let walk: Vec<_> = graph.create_edge_walk(&[e0, e1, e2]);
         let mut incremental_hydrostructure =
