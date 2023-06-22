@@ -3,7 +3,7 @@ name = "omnitigs"
 description = "Omnitig-related algorithms"
 categories = ["mathematics", "algorithms", "science"]
 keywords = ["genome", "assembly", "omnitigs", "bioinformatics"]
-version = "2.2.0"
+version = "3.0.0"
 authors = ["Sebastian Schmidt <isibboi@gmail.com>"]
 edition = "2021"
 homepage = "https://github.com/sebschmi/omnitigs-rs"
@@ -16,9 +16,9 @@ rust-version = "1.58.1"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-traitgraph = "4.0.0-alpha.6"
-traitgraph-algo = "7.0.0-alpha.5"
-bigraph = "4.0.0-alpha.5"
+traitgraph = "4.0.0"
+traitgraph-algo = "7.0.0"
+bigraph = "4.0.0"
 traitsequence = "1.1.0"
 bitvector = "0.1.5"
 rand = "0.8.4"
