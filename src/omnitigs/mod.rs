@@ -2,6 +2,8 @@
 pub mod default_node_centric_trivial_omnitigs;
 /// An algorithm to extract the maximal trivial omnitigs.
 pub mod default_trivial_omnitigs;
+/// An algorithm to extract non-trivial multi-safe walks from macrotigs using the incremental hydrostructure.
+pub mod incremental_hydrostructure_macrotig_based_non_trivial_multi_safe;
 /// An algorithm to extract non-trivial omnitigs from macrotigs using the incremental hydrostructure.
 pub mod incremental_hydrostructure_macrotig_based_non_trivial_omnitigs;
 /// Different algorithms to compute univocal extensions.
@@ -12,6 +14,7 @@ use crate::omnitigs::default_node_centric_trivial_omnitigs::DefaultTrivialNodeCe
 use crate::omnitigs::default_trivial_omnitigs::{
     NonSccTrivialOmnitigAlgorithm, SccTrivialOmnitigAlgorithm,
 };
+use crate::omnitigs::incremental_hydrostructure_macrotig_based_non_trivial_multi_safe::IncrementalHydrostructureMacrotigBasedNonTrivialMultiSafeAlgorithm;
 use crate::omnitigs::incremental_hydrostructure_macrotig_based_non_trivial_omnitigs::IncrementalHydrostructureMacrotigBasedNonTrivialOmnitigAlgorithm;
 use crate::omnitigs::univocal_extension_algorithms::{
     NonSccNodeCentricUnivocalExtensionStrategy, SccNodeCentricUnivocalExtensionStrategy,
@@ -238,6 +241,23 @@ impl<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>> Omnitigs<Graph> {
     /// This algorithm allows the graph to be not strongly connected, but it is a bit slower, especially for long trivial omnitigs.
     pub fn compute_trivial_only_non_scc(graph: &Graph) -> Self {
         NonSccTrivialOmnitigAlgorithm::compute_maximal_trivial_omnitigs(graph, Omnitigs::default())
+    }
+
+    /// Computes the maximal multi-safe walks of the given graph.
+    pub fn compute_multi_safe(graph: &Graph) -> Self {
+        let maximal_macrotigs = Macrotigs::compute(graph);
+        debug!("Found {} macrotigs", maximal_macrotigs.len());
+        let maximal_non_trivial_multi_safe = IncrementalHydrostructureMacrotigBasedNonTrivialMultiSafeAlgorithm::compute_maximal_non_trivial_omnitigs(graph, &maximal_macrotigs);
+        debug!(
+            "Found {} non-trivial multi-safe walks",
+            maximal_non_trivial_multi_safe.len()
+        );
+        let result = SccTrivialOmnitigAlgorithm::compute_maximal_trivial_omnitigs(
+            graph,
+            maximal_non_trivial_multi_safe,
+        );
+        debug!("Found {} multi-safe walks", result.len());
+        result
     }
 }
 
@@ -811,6 +831,43 @@ mod tests {
                 Omnitig::new(graph.create_edge_walk(&[e0, e1, e3, e13, e19]), 3, 4),
                 Omnitig::new(graph.create_edge_walk(&[e25]), 0, 0),
                 Omnitig::new(graph.create_edge_walk(&[e29]), 0, 0),
+            ])
+        );
+    }
+
+    #[test]
+    fn test_multi_safe_petersen() {
+        let mut graph = PetGraph::new();
+        let n: Vec<_> = (0..2).map(|i| graph.add_node(i)).collect();
+        let e = vec![
+            graph.add_edge(n[0], n[1], 100),
+            graph.add_edge(n[1], n[0], 101),
+            graph.add_edge(n[1], n[0], 102),
+        ];
+
+        let omnitigs = Omnitigs::compute(&graph);
+        debug_assert_eq!(
+            omnitigs,
+            Omnitigs::from(vec![
+                Omnitig::new(
+                    graph.create_edge_walk(&[e[0], e[1], e[0], e[2], e[0]]),
+                    1,
+                    3
+                ),
+                Omnitig::new(
+                    graph.create_edge_walk(&[e[0], e[2], e[0], e[1], e[0]]),
+                    1,
+                    3
+                ),
+            ])
+        );
+
+        let multi_safe = Omnitigs::compute_multi_safe(&graph);
+        debug_assert_eq!(
+            multi_safe,
+            Omnitigs::from(vec![
+                Omnitig::new(graph.create_edge_walk(&[e[0], e[1], e[0]]), 1, 1),
+                Omnitig::new(graph.create_edge_walk(&[e[0], e[2], e[0]]), 1, 1),
             ])
         );
     }

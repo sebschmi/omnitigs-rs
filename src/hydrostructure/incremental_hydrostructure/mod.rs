@@ -1,5 +1,6 @@
 use crate::hydrostructure::incremental_hydrostructure::conjunctive_safety_tracker::ConjunctiveSafetyTracker;
 use crate::hydrostructure::incremental_hydrostructure::node_centric_component_tracker::NodeCentricComponentTracker;
+use crate::hydrostructure::incremental_hydrostructure::river_is_non_empty_tracker::RiverIsNonEmptyTracker;
 use crate::hydrostructure::Hydrostructure;
 use crate::restricted_reachability::{
     compute_incremental_restricted_backward_edge_reachability,
@@ -14,6 +15,8 @@ use vapor_is_path_tracker::VaporIsPathTracker;
 pub mod conjunctive_safety_tracker;
 /// A type that keeps counts of the nodes in the different hydrostructure components to dynamically determine if they contain nodes.
 pub mod node_centric_component_tracker;
+/// A type that keeps counts about nodes and edges in the vapor to dynamically determine if the vapor is empty.
+pub mod river_is_non_empty_tracker;
 /// A type that tracks if the river, sea or cloud contain an SCC of size one.
 pub mod size_one_scc_tracker;
 /// A type that keeps counts about nodes and edges in a subgraph to dynamically determine if the subgraph is a path.
@@ -32,16 +35,17 @@ pub type NodeBridgeLikeIncrementalHydrostructure<'graph, 'walk, Graph> = Increme
     ConjunctiveSafetyTracker<VaporIsPathTracker<'graph, Graph>, NodeCentricComponentTracker>,
 >;
 
-/* /// An incremental hydrostructure that checks if the node sequence (including the tail of the last arc and the head of the first arc)
+/// An incremental hydrostructure that checks if the node sequence (including the tail of the last arc and the head of the first arc)
 /// of a subwalk is safe in the node-visible node-covering multi-closed walk model.
-pub type NodeMultiSafeIncrementalHydrostructure<'graph, 'walk, Graph> = IncrementalHydrostructure<
+pub type MultiSafeIncrementalHydrostructure<'graph, 'walk, Graph> = IncrementalHydrostructure<
     'graph,
     'walk,
     Graph,
     ConjunctiveSafetyTracker<
-        ConjunctiveSafetyTracker<VaporIsPathTracker<'graph, Graph>, NodeCentricComponentTracker>,
+        VaporIsPathTracker<'graph, Graph>,
+        RiverIsNonEmptyTracker<'graph, Graph>,
     >,
->;*/
+>;
 
 /// The hydrostructure for a walk `W`.
 /// This hydrostructure implementation is incremental, meaning that it is valid for any subwalk of `W`.
@@ -204,7 +208,7 @@ where
             .next();
     }
 
-    /// When setting the fingers to arbitrary values, this computes the correct values for the rightmost split and join and the vapor_is_path_tracker.
+    /// When setting the fingers to arbitrary values, this computes the correct values for the rightmost split and join and the safety tracker.
     fn reset_fingers(&mut self) {
         self.r_minus
             .set_current_step(self.walk.len() - 1 - self.left_finger);
@@ -230,7 +234,7 @@ where
     /// Set the left finger to the specified value.
     /// Panics if the given index is not a valid index in the underlying walk of this incremental hydrostructure, or if it is not left of the right finger.
     pub fn set_left_finger(&mut self, left_finger: usize) {
-        debug_assert!(left_finger < self.walk.len() && left_finger < self.right_finger);
+        debug_assert!(left_finger < self.walk.len() && left_finger <= self.right_finger);
         self.left_finger = left_finger;
         self.reset_fingers();
     }
@@ -247,7 +251,7 @@ where
             .remove_incremental_subgraph_step(&self.r_plus, &self.r_minus);
 
         self.left_finger += 1;
-        debug_assert!(self.left_finger < self.walk.len() && self.left_finger < self.right_finger);
+        debug_assert!(self.left_finger < self.walk.len() && self.left_finger <= self.right_finger);
         self.r_minus
             .set_current_step(self.walk.len() - 1 - self.left_finger);
 
@@ -271,7 +275,7 @@ where
     /// Set the right finger to the specified value.
     /// Panics if the given index is not a valid index in the underlying walk of this incremental hydrostructure, or if it is not right of the left finger.
     pub fn set_right_finger(&mut self, right_finger: usize) {
-        debug_assert!(right_finger < self.walk.len() && self.left_finger < right_finger);
+        debug_assert!(right_finger < self.walk.len() && self.left_finger <= right_finger);
         self.right_finger = right_finger;
         self.reset_fingers();
     }
@@ -293,7 +297,7 @@ where
         }
 
         self.right_finger += 1;
-        debug_assert!(self.right_finger < self.walk.len());
+        debug_assert!(self.right_finger < self.walk.len() && self.left_finger <= self.right_finger);
         self.r_plus.set_current_step(self.right_finger);
 
         if self
@@ -384,10 +388,11 @@ where
 
     /// Returns true if the current subwalk is safe according to the incremental safety tracker.
     pub fn is_safe(&self) -> bool {
-        self.safety_tracker.is_safe(
-            self.rightmost_split.is_none(),
-            self.rightmost_join.is_none(),
-        )
+        self.current_walk().len() == 1
+            || self.safety_tracker.is_safe(
+                self.rightmost_split.is_none(),
+                self.rightmost_join.is_none(),
+            )
     }
 }
 

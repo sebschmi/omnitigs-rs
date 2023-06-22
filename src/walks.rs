@@ -221,7 +221,7 @@ pub trait EdgeOmnitigLikeExt<
     {
         let mut last_split = 0;
         let mut first_join = self.len() - 1;
-        for (i, &edge) in self.iter().enumerate().take(self.len() - 1).skip(1) {
+        for (i, &edge) in self.iter().enumerate() {
             if graph.is_split_edge(edge) {
                 last_split = last_split.max(i);
             }
@@ -230,9 +230,7 @@ pub trait EdgeOmnitigLikeExt<
             }
         }
 
-        if last_split <= first_join
-            && (last_split > 0 || first_join < self.len() - 1 || self.len() == 1)
-        {
+        if last_split <= first_join {
             Some((last_split, first_join))
         } else {
             None
@@ -425,4 +423,37 @@ impl<
 where
     Graph::EdgeIndex: 'a,
 {
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::walks::EdgeOmnitigLikeExt;
+    use traitgraph::implementation::petgraph_impl::PetGraph;
+    use traitgraph::interface::MutableGraphContainer;
+
+    #[test]
+    fn test_edge_hearts_petersen() {
+        let mut graph = PetGraph::new();
+        let n: Vec<_> = (0..2).map(|i| graph.add_node(i)).collect();
+        let e = vec![
+            graph.add_edge(n[0], n[1], 100),
+            graph.add_edge(n[1], n[0], 101),
+            graph.add_edge(n[1], n[0], 102),
+        ];
+
+        let tests = [
+            (vec![e[1], e[0], e[2]], None),
+            (vec![e[2], e[0], e[1]], None),
+            (vec![e[0], e[1], e[0]], Some((1, 1))),
+            (vec![e[1], e[0]], Some((0, 0))),
+            (vec![e[0], e[1]], Some((1, 1))),
+            (vec![e[0], e[2], e[0]], Some((1, 1))),
+            (vec![e[2], e[0]], Some((0, 0))),
+            (vec![e[0], e[2]], Some((1, 1))),
+        ];
+
+        for (walk, trivial_heart) in tests {
+            assert_eq!(walk.compute_trivial_heart(&graph), trivial_heart);
+        }
+    }
 }
