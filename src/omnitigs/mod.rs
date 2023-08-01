@@ -9,6 +9,8 @@ pub mod incremental_hydrostructure_macrotig_based_non_trivial_omnitigs;
 /// Different algorithms to compute univocal extensions.
 pub mod univocal_extension_algorithms;
 
+use crate::hydrostructure::static_hydrostructure::StaticHydrostructure;
+use crate::hydrostructure::Hydrostructure;
 use crate::macrotigs::macrotigs::Macrotigs;
 use crate::omnitigs::default_node_centric_trivial_omnitigs::DefaultTrivialNodeCentricOmnitigAlgorithm;
 use crate::omnitigs::default_trivial_omnitigs::{
@@ -26,6 +28,7 @@ use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
 use std::iter::FromIterator;
 use std::mem;
+use traitgraph::implementation::subgraphs::bit_vector_subgraph::BitVectorSubgraph;
 use traitgraph::index::GraphIndex;
 use traitgraph::interface::subgraph::SubgraphBase;
 use traitgraph::interface::{GraphBase, StaticGraph};
@@ -247,6 +250,25 @@ impl<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>> Omnitigs<Graph> {
             "Found {} non-trivial multi-safe walks",
             maximal_non_trivial_multi_safe.len()
         );
+
+        // check if they are all actually multi-safe, but only in debug mode
+        #[cfg(debug_assertions)]
+        for multi_safe in &maximal_non_trivial_multi_safe.omnitigs {
+            let hydrostructure = StaticHydrostructure::<BitVectorSubgraph<Graph>>::compute(
+                graph,
+                multi_safe.omnitig.clone(),
+            );
+
+            debug_assert!(
+                graph
+                    .edge_indices()
+                    .any(|edge| hydrostructure.is_edge_river(edge))
+                    || graph
+                        .node_indices()
+                        .any(|node| hydrostructure.is_node_river(node))
+            );
+        }
+
         let result = SccTrivialOmnitigAlgorithm::compute_maximal_trivial_omnitigs(
             graph,
             maximal_non_trivial_multi_safe,
