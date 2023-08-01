@@ -253,34 +253,54 @@ impl<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>> Omnitigs<Graph> {
 
         // check if they are all actually multi-safe, but only in debug mode
         #[cfg(debug_assertions)]
-        for multi_safe in &maximal_non_trivial_multi_safe.omnitigs {
-            let hydrostructure = StaticHydrostructure::<BitVectorSubgraph<Graph>>::compute(
-                graph,
-                multi_safe.omnitig.clone(),
-            );
+        {
+            let mut not_multi_safe_walks = 0;
+            for multi_safe in &maximal_non_trivial_multi_safe.omnitigs {
+                let hydrostructure = StaticHydrostructure::<BitVectorSubgraph<Graph>>::compute(
+                    graph,
+                    multi_safe.omnitig.clone(),
+                );
 
-            debug_assert!(
-                graph
+                if !graph
                     .edge_indices()
                     .any(|edge| hydrostructure.is_edge_river(edge))
-                    || graph
+                    && !graph
                         .node_indices()
-                        .any(|node| hydrostructure.is_node_river(node)),
-                "Multi-safe walk is not multi-safe: {multi_safe:?}\nedges:\n{:#?}",
-                graph
-                    .edge_indices()
-                    .map(|edge| {
-                        let endpoints = graph.edge_endpoints(edge);
-                        format!(
-                            "({}, {})",
-                            endpoints.from_node.as_usize(),
-                            endpoints.to_node.as_usize()
-                        )
-                    })
-                    .collect::<Vec<_>>(),
-            );
+                        .any(|node| hydrostructure.is_node_river(node))
+                {
+                    use std::fs::File;
+                    use std::io::BufWriter;
+                    use std::io::Write;
+
+                    error!("Multi-safe walk is not multi-safe: {multi_safe:?}");
+                    let mut edges: Vec<_> = graph
+                        .edge_indices()
+                        .map(|edge| {
+                            let endpoints = graph.edge_endpoints(edge);
+                            (endpoints.from_node.as_usize(), endpoints.to_node.as_usize())
+                        })
+                        .collect();
+                    edges.sort_unstable();
+
+                    let graph_output_path = "bugged-graph.edges";
+                    error!("Writing offending graph edges to file {graph_output_path:?}");
+                    let mut graph_output = BufWriter::new(File::create(graph_output_path).unwrap());
+                    for (n1, n2) in edges {
+                        writeln!(graph_output, "({n1}, {n2})").unwrap();
+                    }
+                    not_multi_safe_walks += 1;
+                }
+            }
+            if not_multi_safe_walks > 0 {
+                error!(
+                    "Found {} out of {} erroneous multi-safe walks",
+                    not_multi_safe_walks,
+                    maximal_non_trivial_multi_safe.len()
+                );
+            }
         }
 
+        debug!("Computing trivial omnitigs");
         let result = SccTrivialOmnitigAlgorithm::compute_maximal_trivial_omnitigs(
             graph,
             maximal_non_trivial_multi_safe,
