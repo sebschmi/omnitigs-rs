@@ -265,7 +265,19 @@ impl<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>> Omnitigs<Graph> {
                     .any(|edge| hydrostructure.is_edge_river(edge))
                     || graph
                         .node_indices()
-                        .any(|node| hydrostructure.is_node_river(node))
+                        .any(|node| hydrostructure.is_node_river(node)),
+                "Multi-safe walk is not multi-safe: {multi_safe:?}\nedges:\n{:#?}",
+                graph
+                    .edge_indices()
+                    .map(|edge| {
+                        let endpoints = graph.edge_endpoints(edge);
+                        format!(
+                            "({}, {})",
+                            endpoints.from_node.as_usize(),
+                            endpoints.to_node.as_usize()
+                        )
+                    })
+                    .collect::<Vec<_>>(),
             );
         }
 
