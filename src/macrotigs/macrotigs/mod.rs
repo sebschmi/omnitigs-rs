@@ -39,12 +39,10 @@ impl<Graph: GraphBase> Macrotigs<Graph> {
     }
 }
 
-impl<'a, Graph: 'a + GraphBase> Sequence<'a, VecEdgeWalk<Graph>, [VecEdgeWalk<Graph>]>
-    for Macrotigs<Graph>
-{
-    type Iterator = std::slice::Iter<'a, VecEdgeWalk<Graph>>;
+impl<Graph: GraphBase> Sequence<VecEdgeWalk<Graph>, [VecEdgeWalk<Graph>]> for Macrotigs<Graph> {
+    type Iterator<'a> = std::slice::Iter<'a, VecEdgeWalk<Graph>> where Self: 'a;
 
-    fn iter(&'a self) -> Self::Iterator {
+    fn iter(&self) -> Self::Iterator<'_> {
         self.macrotigs.iter()
     }
 

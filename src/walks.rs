@@ -4,17 +4,13 @@ use traitgraph_algo::traversal::univocal_traversal::UnivocalIterator;
 
 /// Functions for node-centric omnitig-like walks.
 /// Since this is an extension trait, it only contains default-implemented functions.
-pub trait NodeOmnitigLikeExt<
-    'a,
-    Graph: GraphBase,
-    NodeSubwalk: NodeWalk<'a, Graph, NodeSubwalk> + ?Sized,
->: NodeWalk<'a, Graph, NodeSubwalk> where
-    Graph::NodeIndex: 'a,
+pub trait NodeOmnitigLikeExt<Graph: GraphBase, NodeSubwalk: NodeWalk<Graph, NodeSubwalk> + ?Sized>:
+    NodeWalk<Graph, NodeSubwalk>
 {
     /// Computes the trivial heart of the walk, or returns `None` if the walk is non-trivial.
     /// The heart is returned as the index of the last split node and the index of the first join node of the walk.
     /// These are not part of the heart.
-    fn compute_trivial_heart(&'a self, graph: &Graph) -> Option<(usize, usize)>
+    fn compute_trivial_heart(&self, graph: &Graph) -> Option<(usize, usize)>
     where
         Graph: StaticGraph,
     {
@@ -40,7 +36,7 @@ pub trait NodeOmnitigLikeExt<
 
     /// Compute the amount of nodes in the trivial heart, or returns `None` if the walk is non-trivial.
     /// Recall that a heart is a walk from arc to arc.
-    fn compute_trivial_heart_node_len(&'a self, graph: &Graph) -> Option<usize>
+    fn compute_trivial_heart_node_len(&self, graph: &Graph) -> Option<usize>
     where
         Graph: StaticGraph,
     {
@@ -52,7 +48,7 @@ pub trait NodeOmnitigLikeExt<
     }
 
     /// Returns true if this walk is non-trivial.
-    fn is_non_trivial(&'a self, graph: &Graph) -> bool
+    fn is_non_trivial(&self, graph: &Graph) -> bool
     where
         Graph: StaticGraph,
     {
@@ -62,7 +58,7 @@ pub trait NodeOmnitigLikeExt<
     /// Computes the univocal extension of this walk.
     /// That is the concatenation LWR, where W is the walk, L the longest R-univocal walk to the first node of W and R the longest univocal walk from the last node of W.
     fn compute_univocal_extension<ResultWalk: From<Vec<Graph::NodeIndex>>>(
-        &'a self,
+        &self,
         graph: &Graph,
     ) -> ResultWalk
     where
@@ -76,7 +72,7 @@ pub trait NodeOmnitigLikeExt<
     /// That is the concatenation LWR, where W is the walk, L the longest R-univocal walk to the first node of W and R the longest univocal walk from the last node of W.
     /// This method handles not strongly connected graphs by disallowing L and R to repeat nodes.
     fn compute_univocal_extension_non_scc<ResultWalk: From<Vec<Graph::NodeIndex>>>(
-        &'a self,
+        &self,
         graph: &Graph,
     ) -> ResultWalk
     where
@@ -91,7 +87,7 @@ pub trait NodeOmnitigLikeExt<
     ///
     /// Additionally to the univocal extension, this function returns the offset of the original walk in the univocal extension as usize.
     fn compute_univocal_extension_with_original_offset<ResultWalk: From<Vec<Graph::NodeIndex>>>(
-        &'a self,
+        &self,
         graph: &Graph,
     ) -> (usize, ResultWalk)
     where
@@ -150,7 +146,7 @@ pub trait NodeOmnitigLikeExt<
     fn compute_univocal_extension_with_original_offset_non_scc<
         ResultWalk: From<Vec<Graph::NodeIndex>>,
     >(
-        &'a self,
+        &self,
         graph: &Graph,
     ) -> (usize, ResultWalk)
     where
@@ -206,16 +202,12 @@ pub trait NodeOmnitigLikeExt<
 
 /// Functions for edge-centric omnitig-like walks.
 /// Since this is an extension trait, it only contains default-implemented functions.
-pub trait EdgeOmnitigLikeExt<
-    'a,
-    Graph: GraphBase,
-    EdgeSubwalk: EdgeWalk<'a, Graph, EdgeSubwalk> + ?Sized,
->: EdgeWalk<'a, Graph, EdgeSubwalk> where
-    Graph::EdgeIndex: 'a,
+pub trait EdgeOmnitigLikeExt<Graph: GraphBase, EdgeSubwalk: EdgeWalk<Graph, EdgeSubwalk> + ?Sized>:
+    EdgeWalk<Graph, EdgeSubwalk>
 {
     /// Computes the trivial heart of the walk, or returns `None` if the walk is non-trivial.
     /// The heart is returned as the index of the last split arc and the index of the first join arc of the walk.
-    fn compute_trivial_heart(&'a self, graph: &Graph) -> Option<(usize, usize)>
+    fn compute_trivial_heart(&self, graph: &Graph) -> Option<(usize, usize)>
     where
         Graph: StaticGraph,
     {
@@ -239,7 +231,7 @@ pub trait EdgeOmnitigLikeExt<
 
     /// Compute the amount of edges in the trivial heart, or returns `None` if the walk is non-trivial.
     /// Recall that a heart is a walk from arc to arc.
-    fn compute_trivial_heart_edge_len(&'a self, graph: &Graph) -> Option<usize>
+    fn compute_trivial_heart_edge_len(&self, graph: &Graph) -> Option<usize>
     where
         Graph: StaticGraph,
     {
@@ -251,7 +243,7 @@ pub trait EdgeOmnitigLikeExt<
     }
 
     /// Returns true if this walk is non-trivial.
-    fn is_non_trivial(&'a self, graph: &Graph) -> bool
+    fn is_non_trivial(&self, graph: &Graph) -> bool
     where
         Graph: StaticGraph,
     {
@@ -261,7 +253,7 @@ pub trait EdgeOmnitigLikeExt<
     /// Compute the univocal extension of a walk.
     /// That is the concatenation LWR, where W is the walk, L the longest R-univocal walk to the first edge of W and R the longest univocal walk from the last edge of W.
     fn compute_univocal_extension<ResultWalk: From<Vec<Graph::EdgeIndex>>>(
-        &'a self,
+        &self,
         graph: &Graph,
     ) -> ResultWalk
     where
@@ -275,7 +267,7 @@ pub trait EdgeOmnitigLikeExt<
     /// That is the concatenation LWR, where W is the walk, L the longest R-univocal walk to the first edge of W and R the longest univocal walk from the last edge of W.
     /// This variant handles not strongly connected graphs by forbidding L and R to repeat edges.
     fn compute_univocal_extension_non_scc<ResultWalk: From<Vec<Graph::EdgeIndex>>>(
-        &'a self,
+        &self,
         graph: &Graph,
     ) -> ResultWalk
     where
@@ -290,7 +282,7 @@ pub trait EdgeOmnitigLikeExt<
     ///
     /// Additionally to the univocal extension, this function returns the offset of the original walk in the univocal extension as usize.
     fn compute_univocal_extension_with_original_offset<ResultWalk: From<Vec<Graph::EdgeIndex>>>(
-        &'a self,
+        &self,
         graph: &Graph,
     ) -> (usize, ResultWalk)
     where
@@ -349,7 +341,7 @@ pub trait EdgeOmnitigLikeExt<
     fn compute_univocal_extension_with_original_offset_non_scc<
         ResultWalk: From<Vec<Graph::EdgeIndex>>,
     >(
-        &'a self,
+        &self,
         graph: &Graph,
     ) -> (usize, ResultWalk)
     where
@@ -404,24 +396,18 @@ pub trait EdgeOmnitigLikeExt<
 }
 
 impl<
-        'a,
         Graph: GraphBase,
-        Walk: NodeWalk<'a, Graph, Subwalk> + ?Sized,
-        Subwalk: NodeWalk<'a, Graph, Subwalk> + ?Sized,
-    > NodeOmnitigLikeExt<'a, Graph, Subwalk> for Walk
-where
-    Graph::NodeIndex: 'a,
+        Walk: NodeWalk<Graph, Subwalk> + ?Sized,
+        Subwalk: NodeWalk<Graph, Subwalk> + ?Sized,
+    > NodeOmnitigLikeExt<Graph, Subwalk> for Walk
 {
 }
 
 impl<
-        'a,
         Graph: GraphBase,
-        Walk: EdgeWalk<'a, Graph, Subwalk> + ?Sized,
-        Subwalk: EdgeWalk<'a, Graph, Subwalk> + ?Sized,
-    > EdgeOmnitigLikeExt<'a, Graph, Subwalk> for Walk
-where
-    Graph::EdgeIndex: 'a,
+        Walk: EdgeWalk<Graph, Subwalk> + ?Sized,
+        Subwalk: EdgeWalk<Graph, Subwalk> + ?Sized,
+    > EdgeOmnitigLikeExt<Graph, Subwalk> for Walk
 {
 }
 

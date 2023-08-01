@@ -106,19 +106,14 @@ impl<Graph: GraphBase> Omnitig<Graph> {
     }
 }
 
-impl<'a, Graph: GraphBase> EdgeWalk<'a, Graph, [Graph::EdgeIndex]> for Omnitig<Graph> where
-    Graph::EdgeIndex: 'a
-{
-}
+impl<Graph: GraphBase> EdgeWalk<Graph, [Graph::EdgeIndex]> for Omnitig<Graph> {}
 
-impl<'a, Graph: GraphBase> Sequence<'a, Graph::EdgeIndex, [Graph::EdgeIndex]> for Omnitig<Graph>
-where
-    Graph::EdgeIndex: 'a,
-{
-    type Iterator =
-        <VecEdgeWalk<Graph> as Sequence<'a, Graph::EdgeIndex, [Graph::EdgeIndex]>>::Iterator;
+impl<Graph: GraphBase> Sequence<Graph::EdgeIndex, [Graph::EdgeIndex]> for Omnitig<Graph> {
+    type Iterator<
+    'a> =
+        <VecEdgeWalk<Graph> as Sequence< Graph::EdgeIndex, [Graph::EdgeIndex]>>::Iterator<'a> where Self: 'a;
 
-    fn iter(&'a self) -> Self::Iterator {
+    fn iter(&self) -> Self::Iterator<'_> {
         self.omnitig.iter()
     }
 
@@ -621,10 +616,9 @@ pub trait UnivocalExtensionAlgorithm<Graph: StaticGraph, ResultWalk: From<Vec<Gr
 /// A collection of node-centric omnitigs.
 pub trait NodeCentricOmnitigs<
     Graph: GraphBase,
-    NodeCentricOmnitigsSubsequence: for<'a> Sequence<'a, VecNodeWalk<Graph>, NodeCentricOmnitigsSubsequence> + ?Sized,
+    NodeCentricOmnitigsSubsequence: Sequence<VecNodeWalk<Graph>, NodeCentricOmnitigsSubsequence> + ?Sized,
 >:
-    From<Vec<VecNodeWalk<Graph>>>
-    + for<'a> Sequence<'a, VecNodeWalk<Graph>, NodeCentricOmnitigsSubsequence>
+    From<Vec<VecNodeWalk<Graph>>> + Sequence<VecNodeWalk<Graph>, NodeCentricOmnitigsSubsequence>
 {
     /// Compute the trivial node-centric omnitigs in the given strongly connected graph.
     fn compute_trivial_node_centric_omnitigs(graph: &Graph) -> Self

@@ -13,14 +13,10 @@ pub struct Macronodes<Graph: GraphBase> {
     macronodes: Vec<VecNodeWalk<Graph>>,
 }
 
-impl<'a, Graph: GraphBase> Sequence<'a, VecNodeWalk<Graph>, [VecNodeWalk<Graph>]>
-    for Macronodes<Graph>
-where
-    Graph::NodeIndex: 'a,
-{
-    type Iterator = std::slice::Iter<'a, VecNodeWalk<Graph>>;
+impl<Graph: GraphBase> Sequence<VecNodeWalk<Graph>, [VecNodeWalk<Graph>]> for Macronodes<Graph> {
+    type Iterator<'a> = std::slice::Iter<'a, VecNodeWalk<Graph>> where Self: 'a;
 
-    fn iter(&'a self) -> Self::Iterator {
+    fn iter(&self) -> Self::Iterator<'_> {
         self.macronodes.iter()
     }
 

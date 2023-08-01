@@ -44,18 +44,12 @@ impl<Graph: GraphBase> NodeUnitig<Graph> {
     }
 }
 
-impl<'a, Graph: GraphBase> NodeWalk<'a, Graph, [Graph::NodeIndex]> for NodeUnitig<Graph> where
-    Graph::NodeIndex: 'a
-{
-}
+impl<Graph: GraphBase> NodeWalk<Graph, [Graph::NodeIndex]> for NodeUnitig<Graph> {}
 
-impl<'a, Graph: GraphBase> Sequence<'a, Graph::NodeIndex, [Graph::NodeIndex]> for NodeUnitig<Graph>
-where
-    Graph::NodeIndex: 'a,
-{
-    type Iterator = std::slice::Iter<'a, Graph::NodeIndex>;
+impl<Graph: GraphBase> Sequence<Graph::NodeIndex, [Graph::NodeIndex]> for NodeUnitig<Graph> {
+    type Iterator<'a> = std::slice::Iter<'a, Graph::NodeIndex> where Self: 'a;
 
-    fn iter(&'a self) -> Self::Iterator {
+    fn iter(&self) -> Self::Iterator<'_> {
         self.walk.iter()
     }
 
@@ -107,18 +101,12 @@ impl<Graph: GraphBase> EdgeUnitig<Graph> {
     }
 }
 
-impl<'a, Graph: GraphBase> EdgeWalk<'a, Graph, [Graph::EdgeIndex]> for EdgeUnitig<Graph> where
-    Graph::EdgeIndex: 'a
-{
-}
+impl<Graph: GraphBase> EdgeWalk<Graph, [Graph::EdgeIndex]> for EdgeUnitig<Graph> {}
 
-impl<'a, Graph: GraphBase> Sequence<'a, Graph::EdgeIndex, [Graph::EdgeIndex]> for EdgeUnitig<Graph>
-where
-    Graph::EdgeIndex: 'a,
-{
-    type Iterator = std::slice::Iter<'a, Graph::EdgeIndex>;
+impl<Graph: GraphBase> Sequence<Graph::EdgeIndex, [Graph::EdgeIndex]> for EdgeUnitig<Graph> {
+    type Iterator<'a> = std::slice::Iter<'a, Graph::EdgeIndex> where Self: 'a;
 
-    fn iter(&'a self) -> Self::Iterator {
+    fn iter(&self) -> Self::Iterator<'_> {
         self.walk.iter()
     }
 
@@ -323,13 +311,10 @@ where
     }
 }
 
-impl<'a, Graph: 'a + GraphBase> Sequence<'a, NodeUnitig<Graph>, [NodeUnitig<Graph>]>
-    for NodeUnitigs<Graph>
-where
-    Graph::NodeIndex: 'a,
-{
-    type Iterator = std::slice::Iter<'a, NodeUnitig<Graph>>;
-    fn iter(&'a self) -> Self::Iterator {
+impl<Graph: GraphBase> Sequence<NodeUnitig<Graph>, [NodeUnitig<Graph>]> for NodeUnitigs<Graph> {
+    type Iterator <
+    'a>= std::slice::Iter<'a, NodeUnitig<Graph>> where Self: 'a;
+    fn iter(&self) -> Self::Iterator<'_> {
         self.unitigs.iter()
     }
 
@@ -391,14 +376,10 @@ where
 {
 }
 
-impl<'a, Graph: 'a + GraphBase> Sequence<'a, EdgeUnitig<Graph>, [EdgeUnitig<Graph>]>
-    for EdgeUnitigs<Graph>
-where
-    Graph::EdgeIndex: 'a,
-{
-    type Iterator = std::slice::Iter<'a, EdgeUnitig<Graph>>;
+impl<Graph: GraphBase> Sequence<EdgeUnitig<Graph>, [EdgeUnitig<Graph>]> for EdgeUnitigs<Graph> {
+    type Iterator<'a> = std::slice::Iter<'a, EdgeUnitig<Graph>> where Self: 'a;
 
-    fn iter(&'a self) -> Self::Iterator {
+    fn iter(&self) -> Self::Iterator<'_> {
         self.unitigs.iter()
     }
 
