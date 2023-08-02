@@ -23,11 +23,22 @@ pub type SccTrivialOmnitigAlgorithm = DefaultTrivialOmnitigAlgorithm<SccUnivocal
 pub type NonSccTrivialOmnitigAlgorithm =
     DefaultTrivialOmnitigAlgorithm<NonSccUnivocalExtensionStrategy>;
 
+/// The state of an edge regarding being in a trivial omnitig heart.
+#[derive(Debug, Eq, PartialEq)]
+pub enum EdgeInTrivialOmnitigHeart {
+    /// The edge is in a trivial omnitig heart that is not part of an infinite cycle.
+    Yes,
+    /// The edge is in a cycle with no incoming or outgoing edges.
+    Cycle,
+    /// The edge is not in a trivial omnitig heart.
+    No,
+}
+
 /// Returns true if the edge is in a trivial omnitig heart.
 pub fn is_edge_in_maximal_trivial_omnitig_heart<Graph: StaticGraph>(
     graph: &Graph,
     edge: Graph::EdgeIndex,
-) -> bool {
+) -> EdgeInTrivialOmnitigHeart {
     let edge_endpoints = graph.edge_endpoints(edge);
 
     let unitig_start_node =
@@ -65,7 +76,7 @@ pub fn is_edge_in_maximal_trivial_omnitig_heart<Graph: StaticGraph>(
     // True if the edge is part of a cycle that can be traversed univocally indefinitely.
     let forward_univocal_cycle =
         unitig_end_node == edge_endpoints.from_node && graph.out_degree(unitig_end_node) == 1;
-    // True if the edge is part of a biunivocal cycle. That is a cycle that is disconnected to all other possibly existing parts of the graph.
+    // True if the edge is part of a biunivocal cycle. That is a cycle that is disconnected from all other possibly existing parts of the graph.
     let univocal_cycle = forward_univocal_cycle && reverse_univocal_cycle;
 
     // True if the edge is part of a trivial heart in a non-circular weakly connected component of the graph.
@@ -74,7 +85,13 @@ pub fn is_edge_in_maximal_trivial_omnitig_heart<Graph: StaticGraph>(
         || graph.in_degree(unitig_start_node) == 0)
         && (graph.in_degree(unitig_end_node) >= 2 || graph.out_degree(unitig_end_node) == 0);
 
-    univocal_cycle || heart_in_non_circular_graph
+    if univocal_cycle {
+        EdgeInTrivialOmnitigHeart::Cycle
+    } else if heart_in_non_circular_graph {
+        EdgeInTrivialOmnitigHeart::Yes
+    } else {
+        EdgeInTrivialOmnitigHeart::No
+    }
 }
 
 impl<
@@ -98,37 +115,70 @@ impl<
 
         debug!("Extend {} unused edges", graph.edge_count());
         for edge in graph.edge_indices() {
+            let edge_in_trivial_omnitig_heart =
+                is_edge_in_maximal_trivial_omnitig_heart(graph, edge);
+
             if used_edges.contains(edge.as_usize())
-                || !is_edge_in_maximal_trivial_omnitig_heart(graph, edge)
+                || edge_in_trivial_omnitig_heart == EdgeInTrivialOmnitigHeart::No
             {
                 continue;
             }
 
-            let trivial_omnitig: VecEdgeWalk<Graph> =
-                Self::UnivocalExtensionStrategy::compute_univocal_extension(graph, &[edge]);
-            for edge in trivial_omnitig.iter() {
-                used_edges.insert(edge.as_usize());
-            }
-            let last_split_edge = trivial_omnitig
-                .iter()
-                .enumerate()
-                .filter(|(_, e)| graph.is_split_edge(**e))
-                .map(|(i, _)| i)
-                .last()
-                .unwrap_or(0);
-            let first_join_edge = trivial_omnitig
-                .iter()
-                .enumerate()
-                .filter(|(_, e)| graph.is_join_edge(**e))
-                .map(|(i, _)| i)
-                .next()
-                .unwrap_or(trivial_omnitig.len() - 1);
+            if edge_in_trivial_omnitig_heart == EdgeInTrivialOmnitigHeart::Yes {
+                let trivial_omnitig: VecEdgeWalk<Graph> =
+                    UnivocalExtensionStrategy::compute_univocal_extension(graph, &[edge]);
+                for edge in trivial_omnitig.iter() {
+                    used_edges.insert(edge.as_usize());
+                }
+                let last_split_edge = trivial_omnitig
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, e)| graph.is_split_edge(**e))
+                    .map(|(i, _)| i)
+                    .last()
+                    .unwrap_or(0);
+                let first_join_edge = trivial_omnitig
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, e)| graph.is_join_edge(**e))
+                    .map(|(i, _)| i)
+                    .next()
+                    .unwrap_or(trivial_omnitig.len() - 1);
 
-            omnitigs.push(Omnitig::new(
-                trivial_omnitig,
-                last_split_edge,
-                first_join_edge,
-            ));
+                omnitigs.push(Omnitig::new(
+                    trivial_omnitig,
+                    last_split_edge,
+                    first_join_edge,
+                ));
+            } else {
+                debug_assert_eq!(
+                    edge_in_trivial_omnitig_heart,
+                    EdgeInTrivialOmnitigHeart::Cycle
+                );
+
+                // if in a cycle, the trivial omnitig is a single round of the cycle
+                let mut trivial_omnitig = VecEdgeWalk::<Graph>::new();
+                trivial_omnitig.push(edge);
+                used_edges.insert(edge.as_usize());
+
+                let mut current_edge = edge;
+                loop {
+                    let mut out_neighbors =
+                        graph.out_neighbors(graph.edge_endpoints(current_edge).to_node);
+                    current_edge = out_neighbors.next().unwrap().edge_id;
+                    debug_assert!(out_neighbors.next().is_none());
+
+                    if current_edge != edge {
+                        trivial_omnitig.push(current_edge);
+                        used_edges.insert(current_edge.as_usize());
+                    } else {
+                        break;
+                    }
+                }
+
+                let len = trivial_omnitig.len();
+                omnitigs.push(Omnitig::new(trivial_omnitig, 0, len - 1));
+            }
         }
 
         debug_assert_eq!(used_edges.len(), graph.edge_count());
@@ -150,7 +200,7 @@ mod tests {
     use traitgraph::interface::MutableGraphContainer;
     use crate::omnitigs::incremental_hydrostructure_macrotig_based_non_trivial_omnitigs::IncrementalHydrostructureMacrotigBasedNonTrivialOmnitigAlgorithm;
     use crate::omnitigs::{MacrotigBasedNonTrivialOmnitigAlgorithm, Omnitigs, TrivialOmnitigAlgorithm, Omnitig};
-    use crate::omnitigs::default_trivial_omnitigs::{is_edge_in_maximal_trivial_omnitig_heart, SccTrivialOmnitigAlgorithm};
+    use crate::omnitigs::default_trivial_omnitigs::{EdgeInTrivialOmnitigHeart, is_edge_in_maximal_trivial_omnitig_heart, SccTrivialOmnitigAlgorithm};
 
     #[test]
     fn test_compute_omnitigs_simple() {
@@ -293,9 +343,9 @@ mod tests {
         debug_assert_eq!(
             trivial_omnitigs,
             Omnitigs::from(vec![Omnitig::new(
-                graph.create_edge_walk(&[e1, e2, e0, e1, e2]),
+                graph.create_edge_walk(&[e0, e1, e2]),
                 0,
-                4
+                2
             )])
         );
     }
@@ -425,11 +475,29 @@ mod tests {
         let e4 = graph.add_edge(n5, n6, 4);
         let e5 = graph.add_edge(n6, n2, 5);
 
-        debug_assert!(is_edge_in_maximal_trivial_omnitig_heart(&graph, e0));
-        debug_assert!(is_edge_in_maximal_trivial_omnitig_heart(&graph, e1));
-        debug_assert!(!is_edge_in_maximal_trivial_omnitig_heart(&graph, e2));
-        debug_assert!(!is_edge_in_maximal_trivial_omnitig_heart(&graph, e3));
-        debug_assert!(is_edge_in_maximal_trivial_omnitig_heart(&graph, e4));
-        debug_assert!(is_edge_in_maximal_trivial_omnitig_heart(&graph, e5));
+        debug_assert_eq!(
+            is_edge_in_maximal_trivial_omnitig_heart(&graph, e0),
+            EdgeInTrivialOmnitigHeart::Yes
+        );
+        debug_assert_eq!(
+            is_edge_in_maximal_trivial_omnitig_heart(&graph, e1),
+            EdgeInTrivialOmnitigHeart::Yes
+        );
+        debug_assert_eq!(
+            is_edge_in_maximal_trivial_omnitig_heart(&graph, e2),
+            EdgeInTrivialOmnitigHeart::No
+        );
+        debug_assert_eq!(
+            is_edge_in_maximal_trivial_omnitig_heart(&graph, e3),
+            EdgeInTrivialOmnitigHeart::No
+        );
+        debug_assert_eq!(
+            is_edge_in_maximal_trivial_omnitig_heart(&graph, e4),
+            EdgeInTrivialOmnitigHeart::Yes
+        );
+        debug_assert_eq!(
+            is_edge_in_maximal_trivial_omnitig_heart(&graph, e5),
+            EdgeInTrivialOmnitigHeart::Yes
+        );
     }
 }
