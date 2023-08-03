@@ -206,6 +206,19 @@ pub struct Omnitigs<Graph: GraphBase> {
     omnitigs_per_macrotig: Vec<usize>,
 }
 
+/// Decides which truncations are produced when calling [Omnitigs::transform_to_multi_safe_strict_model].
+#[derive(Clone, Debug, Eq, PartialEq, Copy)]
+pub enum TruncationMode {
+    /// Produce all truncations.
+    All,
+    /// Produce the first and last truncation.
+    FirstLast,
+    /// Produce only the first truncation.
+    First,
+    /// Produce only the last truncation.
+    Last,
+}
+
 impl<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>> Omnitigs<Graph> {
     /// Computes the maximal omnitigs of the given graph.
     pub fn compute(graph: &Graph) -> Self {
@@ -312,9 +325,8 @@ impl<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>> Omnitigs<Graph> {
     /// The univocal extension of a multi-safe walk is not multi-safe in the strict model if the left and the right extension share any arcs.
     /// In this case, we can truncate the walk to remove the repetitions.
     /// However, there are multiple points at which we could truncate.
-    /// If `produce_all_truncations` is `true`, then the walk will be copied such that all possible truncations are present.
-    /// Otherwise, only the truncation that removes only from the right extension is kept.
-    pub fn transform_to_multi_safe_strict_model(&mut self, produce_all_truncations: bool) {
+    /// The parameter `truncation_mode` decides which of the truncations should be reported.
+    pub fn transform_to_multi_safe_strict_model(&mut self, truncation_mode: TruncationMode) {
         let limit = self.omnitigs.len();
 
         for i in 0..limit {
@@ -330,23 +342,51 @@ impl<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>> Omnitigs<Graph> {
                 }
                 let overlap_length = last_overlapping_index + 1;
 
-                if produce_all_truncations {
-                    for left_truncation in 1..=overlap_length {
+                match truncation_mode {
+                    TruncationMode::All => {
+                        for left_truncation in 1..=overlap_length {
+                            let tig = &self.omnitigs[i];
+                            let truncated_tig = Omnitig::new(
+                                tig[left_truncation..tig.len() - overlap_length + left_truncation]
+                                    .to_owned(),
+                                tig.first_heart_edge - left_truncation,
+                                tig.last_heart_edge - left_truncation,
+                            );
+                            self.omnitigs.push(truncated_tig);
+                        }
+
+                        let tig_len = self.omnitigs[i].len();
+                        self.omnitigs[i]
+                            .omnitig
+                            .resize(tig_len - overlap_length, 0.into());
+                    }
+                    TruncationMode::FirstLast => {
                         let tig = &self.omnitigs[i];
                         let truncated_tig = Omnitig::new(
-                            tig[left_truncation..tig.len() - overlap_length + left_truncation]
-                                .to_owned(),
-                            tig.first_heart_edge - left_truncation,
-                            tig.last_heart_edge - left_truncation,
+                            tig.omnitig.iter().copied().skip(overlap_length).collect(),
+                            tig.first_heart_edge - overlap_length,
+                            tig.last_heart_edge - overlap_length,
                         );
                         self.omnitigs.push(truncated_tig);
+
+                        let tig_len = self.omnitigs[i].len();
+                        self.omnitigs[i]
+                            .omnitig
+                            .resize(tig_len - overlap_length, 0.into());
+                    }
+                    TruncationMode::First => {
+                        let tig_len = self.omnitigs[i].len();
+                        self.omnitigs[i]
+                            .omnitig
+                            .resize(tig_len - overlap_length, 0.into());
+                    }
+                    TruncationMode::Last => {
+                        let tig = &mut self.omnitigs[i];
+                        tig.omnitig.drain(0..overlap_length);
+                        tig.first_heart_edge -= overlap_length;
+                        tig.last_heart_edge -= overlap_length;
                     }
                 }
-
-                let tig_len = self.omnitigs[i].len();
-                self.omnitigs[i]
-                    .omnitig
-                    .resize(tig_len - overlap_length, 0.into());
             }
         }
     }
@@ -840,7 +880,7 @@ pub trait NodeCentricUnivocalExtensionAlgorithm<
 
 #[cfg(test)]
 mod tests {
-    use crate::omnitigs::{Omnitig, Omnitigs};
+    use crate::omnitigs::{Omnitig, Omnitigs, TruncationMode};
     use traitgraph::implementation::petgraph_impl::PetGraph;
     use traitgraph::interface::MutableGraphContainer;
     use traitgraph::interface::WalkableGraph;
@@ -972,22 +1012,19 @@ mod tests {
             3,
             5,
         );
-        let mut tigs_with_single_truncation = Omnitigs::from(vec![tig.clone()]);
-        tigs_with_single_truncation.transform_to_multi_safe_strict_model(false);
-        let mut tigs_with_all_truncations = Omnitigs::from(vec![tig]);
-        tigs_with_all_truncations.transform_to_multi_safe_strict_model(true);
+
+        let mut tigs_truncation_mode_all = Omnitigs::from(vec![tig.clone()]);
+        tigs_truncation_mode_all.transform_to_multi_safe_strict_model(TruncationMode::All);
+        let mut tigs_truncation_mode_first_last = Omnitigs::from(vec![tig.clone()]);
+        tigs_truncation_mode_first_last
+            .transform_to_multi_safe_strict_model(TruncationMode::FirstLast);
+        let mut tigs_truncation_mode_first = Omnitigs::from(vec![tig.clone()]);
+        tigs_truncation_mode_first.transform_to_multi_safe_strict_model(TruncationMode::First);
+        let mut tigs_truncation_mode_last = Omnitigs::from(vec![tig]);
+        tigs_truncation_mode_last.transform_to_multi_safe_strict_model(TruncationMode::Last);
 
         debug_assert_eq!(
-            tigs_with_single_truncation,
-            Omnitigs::from(vec![Omnitig::new(
-                [0, 1, 2, 3, 4, 5, 6].into_iter().map(Into::into).collect(),
-                3,
-                5
-            )])
-        );
-
-        debug_assert_eq!(
-            tigs_with_all_truncations,
+            tigs_truncation_mode_all,
             Omnitigs::from(vec![
                 Omnitig::new(
                     [0, 1, 2, 3, 4, 5, 6].into_iter().map(Into::into).collect(),
@@ -1005,6 +1042,40 @@ mod tests {
                     3
                 ),
             ])
+        );
+
+        debug_assert_eq!(
+            tigs_truncation_mode_first_last,
+            Omnitigs::from(vec![
+                Omnitig::new(
+                    [0, 1, 2, 3, 4, 5, 6].into_iter().map(Into::into).collect(),
+                    3,
+                    5
+                ),
+                Omnitig::new(
+                    [2, 3, 4, 5, 6, 0, 1].into_iter().map(Into::into).collect(),
+                    1,
+                    3
+                ),
+            ])
+        );
+
+        debug_assert_eq!(
+            tigs_truncation_mode_first,
+            Omnitigs::from(vec![Omnitig::new(
+                [0, 1, 2, 3, 4, 5, 6].into_iter().map(Into::into).collect(),
+                3,
+                5
+            )])
+        );
+
+        debug_assert_eq!(
+            tigs_truncation_mode_last,
+            Omnitigs::from(vec![Omnitig::new(
+                [2, 3, 4, 5, 6, 0, 1].into_iter().map(Into::into).collect(),
+                1,
+                3
+            ),])
         );
     }
 }
