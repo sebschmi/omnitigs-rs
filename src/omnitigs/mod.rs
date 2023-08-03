@@ -308,6 +308,48 @@ impl<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>> Omnitigs<Graph> {
         debug!("Found {} multi-safe walks", result.len());
         result
     }
+
+    /// The univocal extension of a multi-safe walk is not multi-safe in the strict model if the left and the right extension share any arcs.
+    /// In this case, we can truncate the walk to remove the repetitions.
+    /// However, there are multiple points at which we could truncate.
+    /// If `produce_all_truncations` is `true`, then the walk will be copied such that all possible truncations are present.
+    /// Otherwise, only the truncation that removes only from the right extension is kept.
+    pub fn transform_to_multi_safe_strict_model(&mut self, produce_all_truncations: bool) {
+        let limit = self.omnitigs.len();
+
+        for i in 0..limit {
+            let tig = &self.omnitigs[i];
+            if let Some(last_overlapping_index) = tig
+                .omnitig
+                .iter()
+                .position(|edge| edge == tig.omnitig.last().unwrap())
+            {
+                if last_overlapping_index >= tig.first_heart_edge {
+                    warn!("Found overlap with the heart or right extension, this was not expected");
+                    continue;
+                }
+                let overlap_length = last_overlapping_index + 1;
+
+                if produce_all_truncations {
+                    for left_truncation in 1..=overlap_length {
+                        let tig = &self.omnitigs[i];
+                        let truncated_tig = Omnitig::new(
+                            tig[left_truncation..tig.len() - overlap_length + left_truncation]
+                                .to_owned(),
+                            tig.first_heart_edge - left_truncation,
+                            tig.last_heart_edge - left_truncation,
+                        );
+                        self.omnitigs.push(truncated_tig);
+                    }
+                }
+
+                let tig_len = self.omnitigs[i].len();
+                self.omnitigs[i]
+                    .omnitig
+                    .resize(tig_len - overlap_length, 0.into());
+            }
+        }
+    }
 }
 
 impl<Graph: StaticEdgeCentricBigraph> Omnitigs<Graph>
@@ -916,6 +958,52 @@ mod tests {
             Omnitigs::from(vec![
                 Omnitig::new(graph.create_edge_walk(&[e[0], e[1], e[0]]), 1, 1),
                 Omnitig::new(graph.create_edge_walk(&[e[0], e[2], e[0]]), 1, 1),
+            ])
+        );
+    }
+
+    #[test]
+    fn test_transform_to_multi_safe_strict_model() {
+        let tig: Omnitig<PetGraph<(), ()>> = Omnitig::new(
+            [0, 1, 2, 3, 4, 5, 6, 0, 1]
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+            3,
+            5,
+        );
+        let mut tigs_with_single_truncation = Omnitigs::from(vec![tig.clone()]);
+        tigs_with_single_truncation.transform_to_multi_safe_strict_model(false);
+        let mut tigs_with_all_truncations = Omnitigs::from(vec![tig]);
+        tigs_with_all_truncations.transform_to_multi_safe_strict_model(true);
+
+        debug_assert_eq!(
+            tigs_with_single_truncation,
+            Omnitigs::from(vec![Omnitig::new(
+                [0, 1, 2, 3, 4, 5, 6].into_iter().map(Into::into).collect(),
+                3,
+                5
+            )])
+        );
+
+        debug_assert_eq!(
+            tigs_with_all_truncations,
+            Omnitigs::from(vec![
+                Omnitig::new(
+                    [0, 1, 2, 3, 4, 5, 6].into_iter().map(Into::into).collect(),
+                    3,
+                    5
+                ),
+                Omnitig::new(
+                    [1, 2, 3, 4, 5, 6, 0].into_iter().map(Into::into).collect(),
+                    2,
+                    4
+                ),
+                Omnitig::new(
+                    [2, 3, 4, 5, 6, 0, 1].into_iter().map(Into::into).collect(),
+                    1,
+                    3
+                ),
             ])
         );
     }
