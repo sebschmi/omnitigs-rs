@@ -9,8 +9,6 @@ pub mod incremental_hydrostructure_macrotig_based_non_trivial_omnitigs;
 /// Different algorithms to compute univocal extensions.
 pub mod univocal_extension_algorithms;
 
-use crate::hydrostructure::static_hydrostructure::StaticHydrostructure;
-use crate::hydrostructure::Hydrostructure;
 use crate::macrotigs::macrotigs::Macrotigs;
 use crate::omnitigs::default_node_centric_trivial_omnitigs::DefaultTrivialNodeCentricOmnitigAlgorithm;
 use crate::omnitigs::default_trivial_omnitigs::{
@@ -28,7 +26,6 @@ use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
 use std::iter::FromIterator;
 use std::mem;
-use traitgraph::implementation::subgraphs::bit_vector_subgraph::BitVectorSubgraph;
 use traitgraph::index::GraphIndex;
 use traitgraph::interface::subgraph::SubgraphBase;
 use traitgraph::interface::{GraphBase, StaticGraph};
@@ -267,6 +264,10 @@ impl<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>> Omnitigs<Graph> {
         // check if they are all actually multi-safe, but only in debug mode
         #[cfg(debug_assertions)]
         {
+            use crate::hydrostructure::static_hydrostructure::StaticHydrostructure;
+            use crate::hydrostructure::Hydrostructure;
+            use traitgraph::implementation::subgraphs::bit_vector_subgraph::BitVectorSubgraph;
+
             let mut not_multi_safe_walks = 0;
             for multi_safe in &maximal_non_trivial_multi_safe.omnitigs {
                 let hydrostructure = StaticHydrostructure::<BitVectorSubgraph<Graph>>::compute(
@@ -334,10 +335,11 @@ impl<Graph: StaticGraph + SubgraphBase<RootGraph = Graph>> Omnitigs<Graph> {
             if let Some(last_overlapping_index) = tig
                 .omnitig
                 .iter()
+                .take(tig.omnitig.len() - 1)
                 .position(|edge| edge == tig.omnitig.last().unwrap())
             {
                 if last_overlapping_index >= tig.first_heart_edge {
-                    warn!("Found overlap with the heart or right extension, this was not expected");
+                    warn!("Found overlap with the heart or right extension, this was not expected: {:?}", tig);
                     continue;
                 }
                 let overlap_length = last_overlapping_index + 1;
