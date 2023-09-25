@@ -886,6 +886,7 @@ mod tests {
     use traitgraph::implementation::petgraph_impl::PetGraph;
     use traitgraph::interface::MutableGraphContainer;
     use traitgraph::interface::WalkableGraph;
+    use traitgraph::walks::EdgeWalk;
 
     #[test]
     fn test_compute_only_trivial_omnitigs_simple() {
@@ -1078,6 +1079,55 @@ mod tests {
                 1,
                 3
             ),])
+        );
+    }
+
+    #[test]
+    fn test_flowtigs_paper_example() {
+        let mut graph = PetGraph::new();
+        let n: Vec<_> = (0..8).map(|i| graph.add_node(i)).collect();
+        let e = vec![
+            graph.add_edge(n[0], n[1], 100),
+            graph.add_edge(n[1], n[2], 101),
+            graph.add_edge(n[2], n[3], 102),
+            graph.add_edge(n[3], n[0], 103),
+            graph.add_edge(n[3], n[4], 104),
+            graph.add_edge(n[4], n[0], 105),
+            graph.add_edge(n[4], n[5], 106),
+            graph.add_edge(n[4], n[6], 107),
+            graph.add_edge(n[5], n[7], 108),
+            graph.add_edge(n[6], n[2], 109),
+            graph.add_edge(n[6], n[3], 110),
+            graph.add_edge(n[7], n[1], 111),
+            graph.add_edge(n[7], n[5], 112),
+            graph.add_edge(n[7], n[6], 113),
+        ];
+
+        let multi_safe = Omnitigs::compute_multi_safe(&graph);
+        for walk in multi_safe.iter() {
+            let walk: Vec<_> = walk.clone_as_node_walk(&graph).unwrap();
+            println!("{walk:?}");
+        }
+
+        // this was made according to what the algorithm does, and not to what I think is correct
+        debug_assert_eq!(
+            multi_safe,
+            Omnitigs::from(vec![
+                Omnitig::new(graph.create_edge_walk(&[e[0], e[1], e[2], e[4]]), 0, 3),
+                Omnitig::new(graph.create_edge_walk(&[e[3], e[0], e[1], e[2]]), 0, 0),
+                Omnitig::new(
+                    graph.create_edge_walk(&[e[4], e[5], e[0], e[1], e[2]]),
+                    1,
+                    1
+                ),
+                Omnitig::new(graph.create_edge_walk(&[e[4], e[6], e[8]]), 1, 1),
+                Omnitig::new(graph.create_edge_walk(&[e[4], e[7]]), 1, 1),
+                Omnitig::new(graph.create_edge_walk(&[e[9], e[2]]), 0, 0),
+                Omnitig::new(graph.create_edge_walk(&[e[10]]), 0, 0),
+                Omnitig::new(graph.create_edge_walk(&[e[8], e[11], e[1], e[2]]), 1, 1),
+                Omnitig::new(graph.create_edge_walk(&[e[8], e[12], e[8]]), 1, 1),
+                Omnitig::new(graph.create_edge_walk(&[e[8], e[13]]), 1, 1),
+            ])
         );
     }
 }
