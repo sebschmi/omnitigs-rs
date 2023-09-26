@@ -973,11 +973,9 @@ mod tests {
     fn test_multi_safe_petersen() {
         let mut graph = PetGraph::new();
         let n: Vec<_> = (0..2).map(|i| graph.add_node(i)).collect();
-        let e = vec![
-            graph.add_edge(n[0], n[1], 100),
+        let e = [graph.add_edge(n[0], n[1], 100),
             graph.add_edge(n[1], n[0], 101),
-            graph.add_edge(n[1], n[0], 102),
-        ];
+            graph.add_edge(n[1], n[0], 102)];
 
         let omnitigs = Omnitigs::compute(&graph);
         debug_assert_eq!(
@@ -1087,8 +1085,7 @@ mod tests {
     fn test_flowtigs_paper_example() {
         let mut graph = PetGraph::new();
         let n: Vec<_> = (0..8).map(|i| graph.add_node(i)).collect();
-        let e = vec![
-            graph.add_edge(n[0], n[1], 100),
+        let e = [graph.add_edge(n[0], n[1], 100),
             graph.add_edge(n[1], n[2], 101),
             graph.add_edge(n[2], n[3], 102),
             graph.add_edge(n[3], n[0], 103),
@@ -1101,8 +1098,7 @@ mod tests {
             graph.add_edge(n[6], n[3], 110),
             graph.add_edge(n[7], n[1], 111),
             graph.add_edge(n[7], n[5], 112),
-            graph.add_edge(n[7], n[6], 113),
-        ];
+            graph.add_edge(n[7], n[6], 113)];
 
         let multi_safe = Omnitigs::compute_multi_safe(&graph);
         for walk in multi_safe.iter() {
