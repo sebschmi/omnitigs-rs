@@ -421,9 +421,11 @@ mod tests {
     fn test_edge_hearts_petersen() {
         let mut graph = PetGraph::new();
         let n: Vec<_> = (0..2).map(|i| graph.add_node(i)).collect();
-        let e = [graph.add_edge(n[0], n[1], 100),
+        let e = [
+            graph.add_edge(n[0], n[1], 100),
             graph.add_edge(n[1], n[0], 101),
-            graph.add_edge(n[1], n[0], 102)];
+            graph.add_edge(n[1], n[0], 102),
+        ];
 
         let tests = [
             (vec![e[1], e[0], e[2]], None),
