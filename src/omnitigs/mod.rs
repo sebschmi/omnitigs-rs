@@ -884,10 +884,24 @@ pub trait NodeCentricUnivocalExtensionAlgorithm<
 mod tests {
     use crate::omnitigs::{Omnitig, Omnitigs, TruncationMode};
     use traitgraph::implementation::petgraph_impl::PetGraph;
-    use traitgraph::index::EdgeIndex;
+    use traitgraph::interface::GraphBase;
     use traitgraph::interface::MutableGraphContainer;
     use traitgraph::interface::WalkableGraph;
     use traitgraph::walks::EdgeWalk;
+
+    fn edge_walk<Graph: GraphBase>(
+        graph: &Graph,
+        edges: &[Graph::EdgeIndex],
+        indices: &[usize],
+    ) -> Vec<Graph::EdgeIndex> {
+        graph.create_edge_walk(
+            indices
+                .iter()
+                .map(|i| edges[*i])
+                .collect::<Vec<_>>()
+                .as_slice(),
+        )
+    }
 
     #[test]
     fn test_compute_only_trivial_omnitigs_simple() {
@@ -1154,20 +1168,7 @@ mod tests {
             println!("{walk:?}");
         }
 
-        fn edge_walk(
-            graph: &PetGraph<i32, i32>,
-            edges: &[EdgeIndex<usize>],
-            indices: &[usize],
-        ) -> Vec<EdgeIndex<usize>> {
-            graph.create_edge_walk(
-                indices
-                    .iter()
-                    .map(|i| edges[*i])
-                    .collect::<Vec<_>>()
-                    .as_slice(),
-            )
-        }
-
+        // this is what I think is correct
         debug_assert_eq!(
             multi_safe,
             Omnitigs::from(vec![
@@ -1177,6 +1178,44 @@ mod tests {
                 Omnitig::new(edge_walk(&graph, &e, &[2, 4, 5, 1, 2]), 2, 2),
                 Omnitig::new(edge_walk(&graph, &e, &[2, 4, 6, 7, 0, 1, 2]), 3, 3),
                 Omnitig::new(edge_walk(&graph, &e, &[2, 4, 6, 8, 2]), 3, 3),
+            ])
+        );
+    }
+
+    #[test]
+    fn test_flowtigs_paper_example4() {
+        let mut graph = PetGraph::new();
+        let n: Vec<_> = (0..6).map(|i| graph.add_node(i)).collect();
+        let e = vec![
+            graph.add_edge(n[0], n[1], 100),
+            graph.add_edge(n[1], n[2], 101),
+            graph.add_edge(n[2], n[1], 102),
+            graph.add_edge(n[2], n[3], 103),
+            graph.add_edge(n[3], n[4], 104),
+            graph.add_edge(n[4], n[0], 105),
+            graph.add_edge(n[4], n[5], 106),
+            graph.add_edge(n[5], n[0], 107),
+            graph.add_edge(n[5], n[3], 108),
+        ];
+
+        let multi_safe = Omnitigs::compute_multi_safe(&graph);
+        for walk in multi_safe.iter() {
+            let walk: Vec<_> = walk.clone_as_node_walk(&graph).unwrap();
+            println!("{walk:?}");
+        }
+        for walk in multi_safe.iter() {
+            println!("{walk:?}");
+        }
+
+        // this was made according to what the algorithm does, and not to what I think is correct
+        debug_assert_eq!(
+            multi_safe,
+            Omnitigs::from(vec![
+                Omnitig::new(edge_walk(&graph, &e, &[1, 3, 4, 6]), 1, 3),
+                Omnitig::new(edge_walk(&graph, &e, &[1, 2, 1]), 1, 1),
+                Omnitig::new(edge_walk(&graph, &e, &[4, 5, 0, 1]), 1, 1),
+                Omnitig::new(edge_walk(&graph, &e, &[4, 6, 7, 0, 1]), 2, 2),
+                Omnitig::new(edge_walk(&graph, &e, &[4, 6, 8, 4]), 2, 2),
             ])
         );
     }
